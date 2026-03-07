@@ -1,33 +1,5 @@
 #!/usr/bin/env bun
 
-async function sendToPostHog(event: string, properties: Record<string, any>) {
-  const key = process.env["POSTHOG_KEY"]
-
-  if (!key) {
-    console.warn("POSTHOG_API_KEY not set, skipping PostHog event")
-    return
-  }
-
-  const response = await fetch("https://us.i.posthog.com/i/v0/e/", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      distinct_id: "download",
-      api_key: key,
-      event,
-      properties: {
-        ...properties,
-      },
-    }),
-  }).catch(() => null)
-
-  if (response && !response.ok) {
-    console.warn(`PostHog API error: ${response.status}`)
-  }
-}
-
 interface Asset {
   name: string
   download_count: number
@@ -200,16 +172,6 @@ const npmDownloads = await fetchNpmDownloads("opencode-ai")
 console.log(`Fetched npm all-time downloads: ${npmDownloads.toLocaleString()}\n`)
 
 await save(githubTotal, npmDownloads)
-
-await sendToPostHog("download", {
-  count: githubTotal,
-  source: "github",
-})
-
-await sendToPostHog("download", {
-  count: npmDownloads,
-  source: "npm",
-})
 
 const totalDownloads = githubTotal + npmDownloads
 
