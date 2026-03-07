@@ -289,9 +289,20 @@ VERIFICATION PASSED — no telemetry references found
 | `https://copilot-api.*` | `plugin/copilot.ts` | Copilot integration | Functional, user-initiated |
 | `https://opencode.ai` | `provider/provider.ts` | HTTP-Referer header for openrouter/zenmux | Low risk |
 
-**Items needing human review:**
-1. **`server/server.ts:567` — `app.opencode.ai` proxy**: Catch-all route proxies ALL unmatched HTTP requests to `app.opencode.ai`. This is a web UI proxy, but it forwards user request headers to an external server. Should be reviewed.
-2. **`share-next.ts` — session sharing is still functional**: While the opncd.ai default was removed, the sharing mechanism is intact. If `enterprise.url` is configured, sessions will still be synced. The code auto-subscribes to all session/message events on startup (unless `OPENCODE_DISABLE_SHARE=true`).
-3. **`models.dev` periodic fetch**: Still active every 60 minutes. Sends User-Agent with version info. Disable with `OPENCODE_DISABLE_MODELS_FETCH=true`.
-4. **No obfuscated URLs or base64-encoded endpoints found.**
-5. **No WebSocket connections to external services found** (all WS is local server events).
+#### Additional Strip Commits (round 2)
+
+| # | Commit | Files Changed | Description |
+|---|--------|--------------|-------------|
+| 8 | `strip-app-proxy` | 1 | Removed catch-all proxy to `app.opencode.ai` in server.ts. Returns 404 instead. |
+| 9 | `strip-share-sync` | 2 | Gutted share-next.ts (all methods are no-ops). Removed ShareNext.init() from bootstrap. Kills automatic session data sync. |
+| 10 | `strip-models-dev` | 1 | Removed runtime fetch + 60-min periodic refresh from models.dev. Models come from build-time snapshot only. |
+
+Build, typecheck, and verify-clean.sh all pass after these changes.
+
+**Remaining external connections (all functional, not telemetry):**
+- LSP server downloads from GitHub (user-initiated)
+- Copilot plugin (user-configured)
+- `opencode.ai/install` in self-updater (user-initiated)
+- `opencode.ai` as HTTP-Referer header for openrouter
+- No obfuscated URLs or base64-encoded endpoints found
+- No WebSocket connections to external services (all WS is local)
