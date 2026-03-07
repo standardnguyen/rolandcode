@@ -12,7 +12,7 @@ export namespace ShareNext {
   const log = Log.create({ service: "share-next" })
 
   export async function url() {
-    return Config.get().then((x) => x.enterprise?.url ?? "https://opncd.ai")
+    return Config.get().then((x) => x.enterprise?.url ?? "")
   }
 
   const disabled = process.env["OPENCODE_DISABLE_SHARE"] === "true" || process.env["OPENCODE_DISABLE_SHARE"] === "1"
