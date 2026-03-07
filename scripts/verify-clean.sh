@@ -16,7 +16,7 @@ DOMAINS=(
   "honeycomb"
   "api.opencode.ai"
   "opncd.ai"
-  "models.dev/api"
+  "models.dev"
   "mcp.exa.ai"
   "opencode.ai/zen"
 )
