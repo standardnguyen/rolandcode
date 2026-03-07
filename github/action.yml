@@ -35,7 +35,7 @@ inputs:
     required: false
 
   oidc_base_url:
-    description: "Base URL for OIDC token exchange API. Only required when running a custom GitHub App install. Defaults to https://api.opencode.ai"
+    description: "Base URL for OIDC token exchange API. Required when running a custom GitHub App install."
     required: false
 
 runs:

@@ -372,9 +372,12 @@ async function getAccessToken() {
   const envToken = useEnvGithubToken()
   if (envToken) return envToken
 
+  const oidcBaseUrl = process.env["OIDC_BASE_URL"]?.replace(/\/+$/, "")
+  if (!oidcBaseUrl) throw new Error("OIDC_BASE_URL environment variable is required")
+
   let response
   if (isMock()) {
-    response = await fetch("https://api.opencode.ai/exchange_github_app_token_with_pat", {
+    response = await fetch(`${oidcBaseUrl}/exchange_github_app_token_with_pat`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${useEnvMock().mockToken}`,
@@ -383,7 +386,7 @@ async function getAccessToken() {
     })
   } else {
     const oidcToken = await core.getIDToken("opencode-github-action")
-    response = await fetch("https://api.opencode.ai/exchange_github_app_token", {
+    response = await fetch(`${oidcBaseUrl}/exchange_github_app_token`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${oidcToken}`,
