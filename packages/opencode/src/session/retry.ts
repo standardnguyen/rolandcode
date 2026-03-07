@@ -64,7 +64,7 @@ export namespace SessionRetry {
     if (MessageV2.APIError.isInstance(error)) {
       if (!error.data.isRetryable) return undefined
       if (error.data.responseBody?.includes("FreeUsageLimitError"))
-        return `Free usage exceeded, add credits https://opencode.ai/zen`
+        return `Free usage exceeded, add credits to your provider account`
       return error.data.message.includes("Overloaded") ? "Provider is overloaded" : error.data.message
     }
 
