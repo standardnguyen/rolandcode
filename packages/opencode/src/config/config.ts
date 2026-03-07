@@ -40,7 +40,7 @@ import { Process } from "@/util/process"
 import { Lock } from "@/util/lock"
 
 export namespace Config {
-  const ModelId = z.string().meta({ $ref: "https://models.dev/model-schema.json#/$defs/Model" })
+  const ModelId = z.string()
 
   const log = Log.create({ service: "config" })
 

@@ -45,7 +45,11 @@ function providerIconsPlugin() {
 }
 
 async function fetchProviderIcons() {
-  const url = process.env.OPENCODE_MODELS_URL || "https://models.dev"
+  const url = process.env.OPENCODE_MODELS_URL
+  if (!url) {
+    console.warn("OPENCODE_MODELS_URL not set, skipping provider icon fetch")
+    return
+  }
   const providers = await fetch(`${url}/api.json`)
     .then((res) => res.json())
     .then((json) => Object.keys(json))

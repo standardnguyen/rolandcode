@@ -22,7 +22,7 @@ export const ModelsCommand = cmd({
         type: "boolean",
       })
       .option("refresh", {
-        describe: "refresh the models cache from models.dev",
+        describe: "refresh the models cache",
         type: "boolean",
       })
   },
