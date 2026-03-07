@@ -15,11 +15,11 @@ process.chdir(dir)
 import { Script } from "@opencode-ai/script"
 import pkg from "../package.json"
 
-const modelsUrl = process.env.OPENCODE_MODELS_URL || "https://models.dev"
-// Fetch and generate models.dev snapshot
+// Model snapshot: must be provided via MODELS_DEV_API_JSON env var (path to local api.json)
+// No remote fetch — build does not phone home
 const modelsDataRaw = process.env.MODELS_DEV_API_JSON
   ? await Bun.file(process.env.MODELS_DEV_API_JSON).text()
-  : await fetch(`${modelsUrl}/api.json`).then((x) => x.text())
+  : (() => { throw new Error("MODELS_DEV_API_JSON env var required: path to a local copy of the model catalog api.json") })()
 // Strip the "opencode" zen gateway provider from snapshot
 const modelsJson = JSON.parse(modelsDataRaw)
 delete modelsJson["opencode"]

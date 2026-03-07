@@ -173,7 +173,7 @@ async function handlePluginAuth(plugin: { auth: PluginAuth }, provider: string, 
 
 /**
  * Build a deduplicated list of plugin-registered auth providers that are not
- * already present in models.dev, respecting enabled/disabled provider lists.
+ * already present in the model catalog, respecting enabled/disabled provider lists.
  * Pure function with no side effects; safe to test without mocking.
  */
 export function resolvePluginProviders(input: {
