@@ -83,10 +83,6 @@ declare module "sst" {
       "type": "sst.sst.Secret"
       "value": string
     }
-    "HONEYCOMB_API_KEY": {
-      "type": "sst.sst.Secret"
-      "value": string
-    }
     "R2AccessKey": {
       "type": "sst.sst.Secret"
       "value": string

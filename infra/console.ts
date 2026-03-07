@@ -196,7 +196,6 @@ const AWS_SES_SECRET_ACCESS_KEY = new sst.Secret("AWS_SES_SECRET_ACCESS_KEY")
 
 const logProcessor = new sst.cloudflare.Worker("LogProcessor", {
   handler: "packages/console/function/src/log-processor.ts",
-  link: [new sst.Secret("HONEYCOMB_API_KEY")],
 })
 
 new sst.cloudflare.x.SolidStart("Console", {
