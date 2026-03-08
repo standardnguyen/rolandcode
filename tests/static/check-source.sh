@@ -142,9 +142,146 @@ for var in "${BAD_ENV_VARS[@]}"; do
   fi
 done
 
-# --- Check 4: Dynamic URL construction (informational) ---
+# --- Check 4: Base64 obfuscation in source ---
 echo ""
-echo "--- 4. Dynamic URL construction (informational) ---"
+echo "--- 4. Base64-encoded telemetry detection ---"
+
+TOTAL=$((TOTAL + 1))
+B64_FOUND=0
+
+# Pre-compute base64 encodings of banned domains
+BANNED_FULL_DOMAINS=(
+  "us.i.posthog.com"
+  "api.honeycomb.io"
+  "api.opencode.ai"
+  "opncd.ai"
+  "opencode.ai"
+  "mcp.exa.ai"
+  "app.opencode.ai"
+)
+
+for domain in "${BANNED_FULL_DOMAINS[@]}"; do
+  B64=$(echo -n "$domain" | base64)
+  # shellcheck disable=SC2086
+  if grep -rn "$B64" $INCLUDE_ARGS $EXCLUDE_ARGS . 2>/dev/null | grep -v "README.md"; then
+    fail "Found base64-encoded telemetry domain in source: $domain -> $B64"
+    B64_FOUND=1
+  fi
+done
+
+# Also check for atob/Buffer.from patterns that decode to something suspicious
+# shellcheck disable=SC2086
+ATOB_CALLS=$(grep -rn 'atob\s*(' $INCLUDE_ARGS $EXCLUDE_ARGS . 2>/dev/null | grep -v "README.md" | grep -v "node_modules" || true)
+if [[ -n "$ATOB_CALLS" ]]; then
+  # Extract the base64 string arguments and try decoding them
+  B64_LITERALS=$(echo "$ATOB_CALLS" | grep -oP 'atob\s*\(\s*["\x27]([A-Za-z0-9+/=]+)["\x27]' 2>/dev/null | grep -oP '[A-Za-z0-9+/=]{8,}' 2>/dev/null || true)
+  if [[ -n "$B64_LITERALS" ]]; then
+    while read -r b64str; do
+      [[ -z "$b64str" ]] && continue
+      DECODED=$(echo "$b64str" | base64 -d 2>/dev/null | tr -d '\0' || true)
+      for domain in "${BANNED_FULL_DOMAINS[@]}"; do
+        if echo "$DECODED" | grep -qi "$domain" 2>/dev/null; then
+          fail "atob() call decodes to telemetry domain: $b64str -> $DECODED"
+          B64_FOUND=1
+        fi
+      done
+    done <<< "$B64_LITERALS"
+  fi
+fi
+
+if [[ $B64_FOUND -eq 0 ]]; then
+  pass "No base64-encoded telemetry domains in source"
+fi
+
+# --- Check 5: Outbound domain allowlist ---
+echo ""
+echo "--- 5. Outbound domain allowlist scan ---"
+
+TOTAL=$((TOTAL + 1))
+
+# Known-good domains that rolandcode legitimately contacts
+ALLOWED_DOMAINS=(
+  "api.openai.com"
+  "api.anthropic.com"
+  "api.deepseek.com"
+  "generativelanguage.googleapis.com"
+  "api.groq.com"
+  "api.mistral.ai"
+  "api.together.xyz"
+  "openrouter.ai"
+  "api.x.ai"
+  "api.fireworks.ai"
+  "inference.cerebras.ai"
+  "api.sambanova.ai"
+  "api.cohere.com"
+  "amazonaws.com"
+  "openai.azure.com"
+  "aiplatform.googleapis.com"
+  "github.com"
+  "api.github.com"
+  "raw.githubusercontent.com"
+  "registry.npmjs.org"
+  "npmjs.com"
+  "localhost"
+  "127.0.0.1"
+  "0.0.0.0"
+  "json-schema.org"
+  "schema.org"
+  "w3.org"
+  "xml.org"
+  "mozilla.org"
+  "ietf.org"
+  "docs."
+  "spec."
+)
+
+# Extract all URL-like strings from source
+# shellcheck disable=SC2086
+FOUND_URLS=$(grep -rohP 'https?://[a-zA-Z0-9._-]+[a-zA-Z0-9]' $INCLUDE_ARGS $EXCLUDE_ARGS . 2>/dev/null \
+  | grep -v "README.md" \
+  | sed 's|https\?://||' \
+  | sort -u || true)
+
+UNKNOWN_DOMAINS=""
+while IFS= read -r domain; do
+  [[ -z "$domain" ]] && continue
+  ALLOWED=0
+  for allowed in "${ALLOWED_DOMAINS[@]}"; do
+    if echo "$domain" | grep -qi "$allowed" 2>/dev/null; then
+      ALLOWED=1
+      break
+    fi
+  done
+  if [[ $ALLOWED -eq 0 ]]; then
+    IS_BANNED=0
+    for banned in "${DOMAINS[@]}"; do
+      if echo "$domain" | grep -qi "$banned" 2>/dev/null; then
+        IS_BANNED=1
+        break
+      fi
+    done
+    if [[ $IS_BANNED -eq 0 ]]; then
+      UNKNOWN_DOMAINS="$UNKNOWN_DOMAINS$domain\n"
+    fi
+  fi
+done <<< "$FOUND_URLS"
+
+if [[ -n "$UNKNOWN_DOMAINS" ]]; then
+  warn "Unknown outbound domains found in source (not on allowlist):"
+  echo -e "$UNKNOWN_DOMAINS" | sort -u | while read -r d; do
+    [[ -z "$d" ]] && continue
+    echo "    ? $d"
+  done
+  pass "Outbound domain scan complete (review warnings above)"
+  PASS=$((PASS - 1))  # undo double-count from pass()
+else
+  pass "All outbound domains on allowlist"
+  PASS=$((PASS - 1))
+fi
+
+# --- Check 6: Dynamic URL construction (informational) ---
+echo ""
+echo "--- 6. Dynamic URL construction (informational) ---"
 
 # Look for string concatenation near fetch/http calls that could build telemetry URLs
 DYNAMIC_HITS=$(grep -rn 'fetch\s*(' --include="*.ts" --include="*.tsx" --include="*.js" \
@@ -157,9 +294,9 @@ else
   info "No suspicious dynamic URL construction found"
 fi
 
-# --- Check 5: Dynamic execution (informational) ---
+# --- Check 7: Dynamic execution (informational) ---
 echo ""
-echo "--- 5. Dynamic execution detection (informational) ---"
+echo "--- 7. Dynamic execution detection (informational) ---"
 
 for pattern in 'eval(' 'new Function(' 'import('; do
   # shellcheck disable=SC2086
@@ -169,9 +306,9 @@ for pattern in 'eval(' 'new Function(' 'import('; do
   fi
 done
 
-# --- Check 6: Timer patterns near network calls (informational) ---
+# --- Check 8: Timer patterns near network calls (informational) ---
 echo ""
-echo "--- 6. Timer/scheduler patterns (informational) ---"
+echo "--- 8. Timer/scheduler patterns (informational) ---"
 
 for pattern in 'setInterval(' 'setTimeout('; do
   # shellcheck disable=SC2086
@@ -183,9 +320,9 @@ for pattern in 'setInterval(' 'setTimeout('; do
   fi
 done
 
-# --- Check 7: Worker/subprocess detection (informational) ---
+# --- Check 9: Worker/subprocess detection (informational) ---
 echo ""
-echo "--- 7. Worker/subprocess detection (informational) ---"
+echo "--- 9. Worker/subprocess detection (informational) ---"
 
 for pattern in 'new Worker(' 'worker_threads' 'child_process'; do
   # shellcheck disable=SC2086
