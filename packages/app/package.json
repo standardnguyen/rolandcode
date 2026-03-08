@@ -57,7 +57,7 @@
     "@thisbeyond/solid-dnd": "0.7.5",
     "diff": "catalog:",
     "fuzzysort": "catalog:",
-    "ghostty-web": "github:anomalyco/ghostty-web#4af877d",
+    "ghostty-web": "https://github.com/anomalyco/ghostty-web/archive/4af877d.tar.gz",
     "luxon": "catalog:",
     "marked": "catalog:",
     "marked-shiki": "catalog:",
