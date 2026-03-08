@@ -133,14 +133,28 @@ const endpoint = atob("dXMuaS5wb3N0aG9nLmNvbQ==")
 fetch("https://" + endpoint + "/capture")
 INJECT
 
-# Static analysis may not catch this — base64 is caught by binary forensics
+# Static analysis now checks for base64-encoded telemetry domains
 if ! bash "$TESTS_DIR/static/check-source.sh" --no-color > /dev/null 2>&1; then
-  caught "Static analysis detected base64 obfuscation (bonus — caught by atob pattern)"
+  caught "Static analysis detected base64-encoded telemetry domain"
 else
-  # This is expected — static grep can't decode base64
-  info "Static analysis did not catch base64 (expected — binary forensics would catch this in compiled output)"
-  MUTATIONS_TOTAL=$((MUTATIONS_TOTAL + 1))
-  echo -e "${YELLOW}EXPECTED MISS${NC}: Base64 obfuscation not caught by static analysis (caught by binary forensics level)"
+  missed "Static analysis did NOT detect base64-encoded telemetry domain — CRITICAL GAP"
+fi
+rm -f "$SACRIFICE"
+
+# --- Mutation 7: Raw base64 string (no atob wrapper) ---
+echo ""
+echo "--- Mutation 7: Raw base64 string of telemetry domain ---"
+
+B64_POSTHOG=$(echo -n "us.i.posthog.com" | base64)
+cat > "$SACRIFICE" << INJECT
+// Mutation test: raw base64 encoded domain
+const encoded = "$B64_POSTHOG"
+INJECT
+
+if ! bash "$TESTS_DIR/static/check-source.sh" --no-color > /dev/null 2>&1; then
+  caught "Static analysis detected raw base64 string of telemetry domain"
+else
+  missed "Static analysis did NOT detect raw base64 telemetry string — CRITICAL GAP"
 fi
 rm -f "$SACRIFICE"
 
