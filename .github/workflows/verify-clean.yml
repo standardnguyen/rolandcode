@@ -1,0 +1,13 @@
+name: Verify Clean
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run telemetry verification
+        run: bash scripts/verify-clean.sh
