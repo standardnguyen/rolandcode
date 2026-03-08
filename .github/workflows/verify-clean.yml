@@ -6,7 +6,9 @@ on:
 
 jobs:
   verify:
-    runs-on: self-hosted
+    runs-on: docker
+    container:
+      image: node:20-bookworm
     steps:
       - uses: actions/checkout@v4
       - name: Run telemetry verification
