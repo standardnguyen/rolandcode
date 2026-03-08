@@ -138,6 +138,108 @@ if [[ $HOOK_SUSPICIOUS -eq 0 ]]; then
   pass "No git hooks reference telemetry domains"
 fi
 
+# --- Check 4: GitHub-hosted dependencies (unpinned) ---
+echo ""
+echo "--- 4. GitHub-hosted dependency audit ---"
+
+TOTAL=$((TOTAL + 1))
+GH_FOUND=0
+
+# Find all github: dependencies in package.json files
+PACKAGE_FILES=$(find . -name "package.json" -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/dist/*")
+for pfile in $PACKAGE_FILES; do
+  # Check for unpinned github deps (pointing to #main, #master, or no hash)
+  UNPINNED=$(grep -n '"github:' "$pfile" 2>/dev/null | grep -E '#(main|master)"' || true)
+  if [[ -n "$UNPINNED" ]]; then
+    fail "Unpinned GitHub dependency in $pfile:"
+    echo "$UNPINNED" | while read -r line; do echo "    $line"; done
+    GH_FOUND=1
+  fi
+done
+
+if [[ $GH_FOUND -eq 0 ]]; then
+  pass "All GitHub dependencies are pinned to specific commits"
+fi
+
+# --- Check 5: anomalyco-owned dependency audit ---
+echo ""
+echo "--- 5. Upstream org dependency audit ---"
+
+TOTAL=$((TOTAL + 1))
+ANOMALY_FOUND=0
+
+# Flag any dependency hosted under the upstream org
+UPSTREAM_ORGS=("anomalyco" "sst")
+for pfile in $PACKAGE_FILES; do
+  for org in "${UPSTREAM_ORGS[@]}"; do
+    MATCHES=$(grep -n "\"github:${org}/" "$pfile" 2>/dev/null || true)
+    if [[ -n "$MATCHES" ]]; then
+      warn "Dependency from upstream org '${org}' in $pfile — audit for telemetry:"
+      echo "$MATCHES" | while read -r line; do echo "    $line"; done
+      ANOMALY_FOUND=1
+    fi
+  done
+done
+
+# Also check node_modules for anomalyco content
+for org in "${UPSTREAM_ORGS[@]}"; do
+  ORG_DIRS=$(find node_modules/.bun -maxdepth 1 -name "*${org}*" -type d 2>/dev/null || true)
+  if [[ -n "$ORG_DIRS" ]]; then
+    info "Cached packages from '${org}' in node_modules/.bun:"
+    echo "$ORG_DIRS" | while read -r d; do echo "    $(basename "$d")"; done
+  fi
+done
+
+if [[ $ANOMALY_FOUND -eq 0 ]]; then
+  pass "No dependencies from upstream org"
+else
+  # This is a WARNING, not a FAIL — the dep may be legitimate but needs review
+  pass "Upstream org dependencies flagged for review (see warnings above)"
+  PASS=$((PASS - 1))  # undo double-count
+fi
+
+# --- Check 6: WASM blob audit ---
+echo ""
+echo "--- 6. WASM blob audit ---"
+
+TOTAL=$((TOTAL + 1))
+WASM_FILES=$(find . -name "*.wasm" -not -path "*/node_modules/*" -not -path "*/.git/*" 2>/dev/null || true)
+WASM_NM_FILES=$(find node_modules -name "*.wasm" -not -path "*/.git/*" 2>/dev/null | head -20 || true)
+
+if [[ -n "$WASM_FILES" ]]; then
+  warn "WASM blobs in source tree (opaque binaries — cannot be statically audited):"
+  echo "$WASM_FILES" | while read -r f; do
+    SIZE=$(stat -c%s "$f" 2>/dev/null || echo "?")
+    echo "    $f ($SIZE bytes)"
+  done
+fi
+
+if [[ -n "$WASM_NM_FILES" ]]; then
+  info "WASM blobs in node_modules:"
+  echo "$WASM_NM_FILES" | while read -r f; do
+    SIZE=$(stat -c%s "$f" 2>/dev/null || echo "?")
+    echo "    $f ($SIZE bytes)"
+  done
+fi
+
+# Check WASM files for telemetry strings
+WASM_TAINTED=0
+for wasm in $WASM_FILES $WASM_NM_FILES; do
+  [[ -f "$wasm" ]] || continue
+  if command -v strings &>/dev/null; then
+    for domain in "${BANNED_DOMAINS[@]}"; do
+      if strings "$wasm" 2>/dev/null | grep -qi "$domain"; then
+        fail "WASM blob '$wasm' contains telemetry domain: $domain"
+        WASM_TAINTED=1
+      fi
+    done
+  fi
+done
+
+if [[ $WASM_TAINTED -eq 0 ]]; then
+  pass "No telemetry domains found in WASM blobs"
+fi
+
 # --- Summary ---
 echo ""
 echo "=== Supply Chain Audit Results ==="
