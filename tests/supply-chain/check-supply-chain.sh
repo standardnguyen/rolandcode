@@ -168,11 +168,11 @@ echo "--- 5. Upstream org dependency audit ---"
 TOTAL=$((TOTAL + 1))
 ANOMALY_FOUND=0
 
-# Flag any dependency hosted under the upstream org
+# Flag any dependency hosted under the upstream org (github: protocol or tarball URL)
 UPSTREAM_ORGS=("anomalyco" "sst")
 for pfile in $PACKAGE_FILES; do
   for org in "${UPSTREAM_ORGS[@]}"; do
-    MATCHES=$(grep -n "\"github:${org}/" "$pfile" 2>/dev/null || true)
+    MATCHES=$(grep -n "\"github:${org}/\|github.com/${org}/" "$pfile" 2>/dev/null || true)
     if [[ -n "$MATCHES" ]]; then
       warn "Dependency from upstream org '${org}' in $pfile — audit for telemetry:"
       echo "$MATCHES" | while read -r line; do echo "    $line"; done
