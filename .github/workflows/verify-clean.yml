@@ -43,8 +43,8 @@ jobs:
 
       - name: Build rolandcode
         env:
-          MODELS_DEV_API_JSON: packages/opencode/test/tool/fixtures/models-api.json
-        run: $HOME/.bun/bin/bun run build --single
+          MODELS_DEV_API_JSON: test/tool/fixtures/models-api.json
+        run: cd packages/opencode && $HOME/.bun/bin/bun run build --single
 
       - name: Run dependency audit
         run: bash tests/deps/check-deps.sh --no-color
