@@ -1,0 +1,8 @@
+.bin
+.bun
+@actions
+@aws-sdk
+@opencode-ai
+@tsconfig
+@types
+@typescript
