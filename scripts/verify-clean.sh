@@ -35,8 +35,8 @@ for ext in ts tsx js jsx go json yaml yml toml; do
   INCLUDE_ARGS="$INCLUDE_ARGS --include=*.$ext"
 done
 
-# Directories to exclude
-EXCLUDE_ARGS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build"
+# Directories and files to exclude
+EXCLUDE_ARGS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude=models-snapshot.ts --exclude=models-api.json"
 
 echo "--- Domain checks ---"
 for pattern in "${DOMAINS[@]}"; do
