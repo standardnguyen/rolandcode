@@ -74,7 +74,14 @@ jobs:
         run: apt-get update && apt-get install -y --no-install-recommends strace binutils
 
       - name: Install dependencies
-        run: $HOME/.bun/bin/bun install
+        env:
+          # Override Forgejo runner's GitHub redirect so bun can resolve
+          # github: dependencies from the real GitHub API
+          GITHUB_API_URL: https://api.github.com
+          GITHUB_SERVER_URL: https://github.com
+        run: |
+          git config --global url."https://github.com/".insteadOf "https://github.com/"
+          $HOME/.bun/bin/bun install
 
       - name: Build rolandcode
         env:
