@@ -1,0 +1,121 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*-clean*'
+
+jobs:
+  verify-and-release:
+    name: Verify + Build + Release
+    runs-on: docker
+    container:
+      image: node:20-bookworm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Install system tools
+        run: apt-get update && apt-get install -y --no-install-recommends strace binutils file
+
+      - name: Install dependencies
+        run: $HOME/.bun/bin/bun install
+
+      - name: Run primary telemetry verification
+        run: bash scripts/verify-clean.sh
+
+      - name: Run static analysis suite
+        run: bash tests/static/check-source.sh --no-color
+
+      - name: Run mutation tests
+        run: bash tests/mutation/check-mutations.sh --no-color
+
+      - name: Build rolandcode
+        env:
+          MODELS_DEV_API_JSON: test/tool/fixtures/models-api.json
+        run: cd packages/opencode && $HOME/.bun/bin/bun run build --single
+
+      - name: Run binary forensics
+        run: bash tests/binary/check-binary.sh --no-color
+
+      - name: Package binary
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          BINARY_DIR="packages/opencode/dist/opencode-linux-x64/bin"
+          ARCHIVE="rolandcode-linux-x64-${TAG}.tar.gz"
+
+          # Verify binary exists
+          ls -la "$BINARY_DIR/rolandcode"
+          file "$BINARY_DIR/rolandcode"
+
+          # Create tarball
+          tar -czf "$ARCHIVE" -C "$BINARY_DIR" rolandcode
+          sha256sum "$ARCHIVE" > "${ARCHIVE}.sha256"
+
+          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
+          echo "SHA256_FILE=${ARCHIVE}.sha256" >> $GITHUB_ENV
+
+          echo "--- Package info ---"
+          ls -lh "$ARCHIVE"
+          cat "${ARCHIVE}.sha256"
+
+      - name: Create Forgejo release
+        env:
+          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          API_URL="${GITHUB_SERVER_URL}/api/v1"
+          REPO="${GITHUB_REPOSITORY}"
+          SHA256=$(cat "$SHA256_FILE")
+
+          RELEASE_BODY=$(cat <<BODY
+          ## rolandcode ${TAG}
+
+          Telemetry-stripped build of OpenCode.
+
+          **Verification:** All checks passed (verify-clean.sh, static analysis, mutation tests, binary forensics).
+
+          **Platform:** Linux x64 (glibc)
+
+          **SHA256:**
+          \`\`\`
+          ${SHA256}
+          \`\`\`
+          BODY
+          )
+
+          BODY_JSON=$(echo "$RELEASE_BODY" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')
+
+          RESPONSE=$(curl -s -X POST "${API_URL}/repos/${REPO}/releases" \
+            -H "Authorization: token ${FORGEJO_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"tag_name\": \"${TAG}\",
+              \"name\": \"${TAG}\",
+              \"body\": ${BODY_JSON},
+              \"draft\": false,
+              \"prerelease\": false
+            }")
+
+          echo "Release API response: $RESPONSE"
+
+          RELEASE_ID=$(echo "$RESPONSE" | python3 -c "import sys,json; print(json.load(sys.stdin)['id'])")
+          echo "Created release ID: $RELEASE_ID"
+
+          # Upload binary archive
+          curl -s -X POST "${API_URL}/repos/${REPO}/releases/${RELEASE_ID}/assets?name=${ARCHIVE}" \
+            -H "Authorization: token ${FORGEJO_TOKEN}" \
+            -H "Content-Type: application/gzip" \
+            --data-binary "@${ARCHIVE}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Uploaded: {d[\"name\"]} ({d[\"size\"]} bytes)')"
+
+          # Upload checksum file
+          curl -s -X POST "${API_URL}/repos/${REPO}/releases/${RELEASE_ID}/assets?name=${SHA256_FILE}" \
+            -H "Authorization: token ${FORGEJO_TOKEN}" \
+            -H "Content-Type: text/plain" \
+            --data-binary "@${SHA256_FILE}" | python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Uploaded: {d[\"name\"]} ({d[\"size\"]} bytes)')"
+
+          echo ""
+          echo "Release published: ${GITHUB_SERVER_URL}/${REPO}/releases/tag/${TAG}"
