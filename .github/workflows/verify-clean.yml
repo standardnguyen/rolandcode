@@ -11,5 +11,12 @@ jobs:
       image: node:20-bookworm
     steps:
       - uses: actions/checkout@v4
-      - name: Run telemetry verification
+
+      - name: Run primary telemetry verification
         run: bash scripts/verify-clean.sh
+
+      - name: Run static analysis suite
+        run: bash tests/static/check-source.sh --no-color
+
+      - name: Run mutation tests
+        run: bash tests/mutation/check-mutations.sh --no-color
