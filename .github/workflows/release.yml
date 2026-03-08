@@ -120,4 +120,68 @@ jobs:
           python3 -c "import json; d=json.load(open('/tmp/upload2.json')); print(f'Uploaded: {d[\"name\"]} ({d[\"size\"]} bytes)')"
 
           echo ""
-          echo "Release published: ${GITHUB_SERVER_URL}/${REPO}/releases/tag/${TAG}"
+          echo "Forgejo release published: ${GITHUB_SERVER_URL}/${REPO}/releases/tag/${TAG}"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          GH_REPO="standardnguyen/rolandcode"
+          GH_API="https://api.github.com"
+          SHA256=$(cat "$SHA256_FILE")
+
+          # Build release payload
+          python3 -c "
+          import json
+          body = '''## rolandcode ${TAG}
+
+          Telemetry-stripped build of [OpenCode](https://github.com/anomalyco/opencode).
+
+          **Verification:** All checks passed (verify-clean.sh, static analysis, mutation tests, binary forensics).
+
+          **Platform:** Linux x64 (glibc)
+
+          **SHA256:**
+          \`\`\`
+          ${SHA256}
+          \`\`\`'''
+          payload = {
+              'tag_name': '${TAG}',
+              'name': '${TAG}',
+              'body': body,
+              'draft': False,
+              'prerelease': False
+          }
+          print(json.dumps(payload))
+          " > /tmp/gh-release-payload.json
+
+          # Create release
+          curl -s -X POST "${GH_API}/repos/${GH_REPO}/releases" \
+            -H "Authorization: token ${GH_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/gh-release-payload.json > /tmp/gh-release-response.json
+
+          UPLOAD_URL=$(python3 -c "
+          import json
+          d = json.load(open('/tmp/gh-release-response.json'))
+          print(d['upload_url'].replace('{?name,label}', ''))
+          ")
+          echo "GitHub release created"
+
+          # Upload binary archive
+          curl -s -X POST "${UPLOAD_URL}?name=${ARCHIVE}" \
+            -H "Authorization: token ${GH_TOKEN}" \
+            -H "Content-Type: application/gzip" \
+            --data-binary "@${ARCHIVE}" > /tmp/gh-upload1.json
+          python3 -c "import json; d=json.load(open('/tmp/gh-upload1.json')); print(f'GitHub uploaded: {d[\"name\"]} ({d[\"size\"]} bytes)')"
+
+          # Upload checksum file
+          curl -s -X POST "${UPLOAD_URL}?name=${SHA256_FILE}" \
+            -H "Authorization: token ${GH_TOKEN}" \
+            -H "Content-Type: text/plain" \
+            --data-binary "@${SHA256_FILE}" > /tmp/gh-upload2.json
+          python3 -c "import json; d=json.load(open('/tmp/gh-upload2.json')); print(f'GitHub uploaded: {d[\"name\"]} ({d[\"size\"]} bytes)')"
+
+          echo ""
+          echo "GitHub release published: https://github.com/${GH_REPO}/releases/tag/${TAG}"
