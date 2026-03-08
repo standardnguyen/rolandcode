@@ -5,11 +5,58 @@ on:
   pull_request:
 
 jobs:
-  verify:
+  static:
+    name: Static + Mutation
     runs-on: docker
     container:
       image: node:20-bookworm
     steps:
       - uses: actions/checkout@v4
-      - name: Run telemetry verification
+
+      - name: Run primary telemetry verification
         run: bash scripts/verify-clean.sh
+
+      - name: Run static analysis suite
+        run: bash tests/static/check-source.sh --no-color
+
+      - name: Run mutation tests
+        run: bash tests/mutation/check-mutations.sh --no-color
+
+  build-and-verify:
+    name: Build + Binary Forensics
+    runs-on: docker
+    container:
+      image: node:20-bookworm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Install system tools
+        run: apt-get update && apt-get install -y --no-install-recommends strace binutils
+
+      - name: Install dependencies
+        run: $HOME/.bun/bin/bun install
+
+      - name: Build rolandcode
+        env:
+          MODELS_DEV_API_JSON: test/tool/fixtures/models-api.json
+        run: cd packages/opencode && $HOME/.bun/bin/bun run build --single
+
+      - name: Run dependency audit
+        run: bash tests/deps/check-deps.sh --no-color
+
+      - name: Run supply chain audit
+        run: bash tests/supply-chain/check-supply-chain.sh --no-color
+
+      - name: Run binary forensics
+        run: bash tests/binary/check-binary.sh --no-color
+
+      - name: Run behavioral tests
+        run: bash tests/behavioral/check-behavior.sh --no-color
+
+      - name: Run snapshot comparison
+        run: bash tests/snapshots/compare-snapshot.sh --no-color

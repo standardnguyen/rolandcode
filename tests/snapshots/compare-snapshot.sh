@@ -64,7 +64,9 @@ if [[ -n "$BINARY" && -f "$SCRIPT_DIR/urls.txt" ]] && command -v strings &>/dev/
   REMOVED_URLS=$(comm -13 "$TMPDIR/urls-current.txt" "$SCRIPT_DIR/urls.txt" 2>/dev/null || true)
 
   if [[ -n "$NEW_URLS" ]]; then
-    crit "New URLs found in binary since baseline:"
+    # New URLs are flagged for review but not blocking — binary forensics
+    # (check-binary.sh) is the hard gate for telemetry domains
+    warning "New URLs found in binary since baseline — review for telemetry:"
     echo "$NEW_URLS" | while read -r url; do
       echo "    + $url"
     done
