@@ -54,7 +54,7 @@ This greps the entire source tree for all known telemetry domains and SDK packag
 
 ## How it works
 
-Rolandcode maintains a small patch set (11 commits) on top of upstream OpenCode. Each strip commit removes one telemetry concern:
+Rolandcode maintains a small patch set on top of upstream OpenCode. Each strip commit removes one telemetry concern:
 
 - `strip-posthog` — PostHog analytics
 - `strip-honeycomb` — Honeycomb telemetry
@@ -66,6 +66,31 @@ Rolandcode maintains a small patch set (11 commits) on top of upstream OpenCode.
 - `strip-models-dev` — Runtime model list fetching
 
 Small, isolated commits rebase cleanly when upstream moves.
+
+## Testing
+
+```bash
+# Full suite (runs permission tests in Docker when running as root)
+bash scripts/test.sh
+
+# Just the main suite
+cd packages/opencode && bun test --timeout 30000
+
+# Just the permission tests (must be non-root, or use Docker)
+docker run --rm -v $(pwd):/app:ro -w /app/packages/opencode -u 1000:1000 --tmpfs /tmp:exec oven/bun:1.3.10 \
+  bun test test/tool/write.test.ts test/config/tui.test.ts --timeout 30000
+```
+
+### Known test issues
+
+| Test | Status | Why |
+|------|--------|-----|
+| `session.llm.stream` (2 of 10) | Flaky | Mock HTTP server state leaks between parallel tests. Passes 10/10 when run in isolation (`bun test test/session/llm.test.ts`). Upstream test isolation bug — not a code defect. |
+| `tool.write > throws error when OS denies write access` | Fails as root | Root bypasses `chmod 0o444`. Passes in Docker as non-root. `scripts/test.sh` handles this automatically. |
+| `tui config > continues loading when legacy source cannot be stripped` | Fails as root | Same root-vs-chmod issue. Passes in Docker as non-root. |
+| `fsmonitor` (2 tests) | Skipped | Windows-only (`process.platform === "win32"`). |
+| `worktree-remove` (1 test) | Skipped | Windows-only. |
+| `unicode filenames modification and restore` | Skipped | Upstream explicitly skipped — known bug they haven't fixed. |
 
 ## Upstream
 

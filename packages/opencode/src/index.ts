@@ -49,7 +49,7 @@ process.on("uncaughtException", (e) => {
 
 let cli = yargs(hideBin(process.argv))
   .parserConfiguration({ "populate--": true })
-  .scriptName("opencode")
+  .scriptName("rolandcode")
   .wrap(100)
   .help("help", "show help")
   .alias("help", "h")
