@@ -1,0 +1,46 @@
+name: Auto-tag on merge
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  auto-tag:
+    name: Tag next clean release
+    runs-on: docker
+    container:
+      image: node:20-bookworm
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute and push tag
+        run: |
+          VERSION=$(node -p "require('./packages/opencode/package.json').version")
+
+          # Find the highest -clean.N for this version
+          LATEST=$(git tag -l "v${VERSION}-clean.*" --sort=-version:refname | head -1)
+
+          if [ -z "$LATEST" ]; then
+            NEXT="v${VERSION}-clean.1"
+          else
+            N=$(echo "$LATEST" | grep -oP 'clean\.\K[0-9]+')
+            NEXT="v${VERSION}-clean.$((N + 1))"
+          fi
+
+          echo "Latest tag: ${LATEST:-none}"
+          echo "Next tag: $NEXT"
+
+          # Skip if this commit is already tagged
+          EXISTING=$(git tag --points-at HEAD | grep -F "clean" || true)
+          if [ -n "$EXISTING" ]; then
+            echo "HEAD already tagged: $EXISTING — skipping"
+            exit 0
+          fi
+
+          git config user.name "Forgejo Actions"
+          git config user.email "actions@rolandcode.local"
+          git tag "$NEXT"
+          git push origin "$NEXT"
+          echo "Pushed tag: $NEXT"
