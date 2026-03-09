@@ -43,27 +43,18 @@ export namespace UI {
   export function logo(pad?: string) {
     const result: string[] = []
     const reset = "\x1b[0m"
-    const muted = "\x1b[90m"
-    const bold = "\x1b[1m"
-    const draw = (line: string, fg: string) => {
+    const white = "\x1b[97m\x1b[1m"
+    for (const row of glyphs) {
+      if (pad) result.push(pad)
       const parts: string[] = []
-      for (const char of line) {
+      for (const char of row) {
         if (char === " ") {
           parts.push(" ")
           continue
         }
-        parts.push(fg, char, reset)
+        parts.push(white, char, reset)
       }
-      return parts.join("")
-    }
-    for (const row of glyphs.top) {
-      if (pad) result.push(pad)
-      result.push(draw(row, muted))
-      result.push(EOL)
-    }
-    for (const row of glyphs.bottom) {
-      if (pad) result.push(pad)
-      result.push(draw(row, bold))
+      result.push(parts.join(""))
       result.push(EOL)
     }
     return result.join("").trimEnd()
