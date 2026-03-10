@@ -1,18 +1,4 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">開源的 AI Coding Agent。</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
+--- 文件：已粘贴 ---
 
 <p align="center">
   <a href="README.md">English</a> |
@@ -39,102 +25,104 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+[OpenCode](https://github.com/anomalyco/opencode) 的一个干净分支，移除了所有遥测和回连（phone-home）行为。
+
+OpenCode 宣传自己是“隐私优先”和“开源”的，但静默地将数据传输到多个第三方服务——分析（PostHog）、遥测（Honeycomb）、会话共享（opncd.ai）、提示词代理（opencode.ai/zen）、搜索查询转发（mcp.exa.ai）以及泄露 IP 的模型列表获取（models.dev）。维护者最初否认存在遥测（[#459](https://github.com/sst/opencode/issues/459)），随后又承认了。用户报告称，在配置中禁用遥测并不能完全停止出站连接（[#5554](https://github.com/sst/opencode/issues/5554)）。
+
+Rolandcode 不试图说服 OpenCode 做出改变。它只是剥离他们的遥测并发布干净的构建版本。
+
+名字源自布朗宁的《奇尔德·罗兰来到黑塔》（*Childe Roland to the Dark Tower Came*）——罗兰不顾一切阻碍，最终抵达了塔楼。
 
 ---
 
-### 安裝
+## 移除的内容
+
+| 端点 | 发送了什么 |
+|----------|-------------|
+| `us.i.posthog.com` | 使用分析 |
+| `api.honeycomb.io` | 遥测、IP 地址、位置 |
+| `api.opencode.ai` | 会话内容、提示词 |
+| `opncd.ai` | 会话共享数据 |
+| `opencode.ai/zen/v1` | 通过 OpenCode 网关代理的提示词 |
+| `mcp.exa.ai` | 搜索查询 |
+| `models.dev` | 模型列表获取（泄露 IP） |
+| `app.opencode.ai` | 通用应用代理 |
+
+模型目录在构建时从本地快照嵌入——没有运行时回连。
+
+## 安装
+
+从 [发布页面](https://github.com/TODO/rolandcode/releases) 下载二进制文件，或从源码构建：
 
 ```bash
-# 直接安裝 (YOLO)
-curl -fsSL https://opencode.ai/install | bash
+git clone https://github.com/TODO/rolandcode.git
+cd rolandcode/packages/opencode
 
-# 套件管理員
-npm i -g opencode-ai@latest        # 也可使用 bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS 與 Linux（推薦，始終保持最新）
-brew install opencode              # macOS 與 Linux（官方 brew formula，更新頻率較低）
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # 任何作業系統
-nix run nixpkgs#opencode           # 或使用 github:anomalyco/opencode 以取得最新開發分支
+# 下载模型目录快照
+curl -fsSL -o models-api.json https://models.dev/api.json
+
+# 构建
+MODELS_DEV_API_JSON=./models-api.json bun run build --single
 ```
 
-> [!TIP]
-> 安裝前請先移除 0.1.x 以前的舊版本。
+二进制文件位于 `dist/opencode-linux-x64/bin/rolandcode`（或您平台的等效路径）。
 
-### 桌面應用程式 (BETA)
+## 验证
 
-OpenCode 也提供桌面版應用程式。您可以直接從 [發佈頁面 (releases page)](https://github.com/anomalyco/opencode/releases) 或 [opencode.ai/download](https://opencode.ai/download) 下載。
-
-| 平台                  | 下載連結                              |
-| --------------------- | ------------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-darwin-aarch64.dmg` |
-| macOS (Intel)         | `opencode-desktop-darwin-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe`    |
-| Linux                 | `.deb`, `.rpm`, 或 AppImage           |
+每个构建都可以验证为干净：
 
 ```bash
-# macOS (Homebrew Cask)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+bash scripts/verify-clean.sh
 ```
 
-#### 安裝目錄
+这会在整个源码树中 grep 所有已知的遥测域名和 SDK 包。如果仍有引用，构建将失败。grep 不会撒谎。
 
-安裝腳本會依據以下優先順序決定安裝路徑：
+## 工作原理
 
-1. `$OPENCODE_INSTALL_DIR` - 自定義安裝目錄
-2. `$XDG_BIN_DIR` - 符合 XDG 基礎目錄規範的路徑
-3. `$HOME/bin` - 標準使用者執行檔目錄 (若存在或可建立)
-4. `$HOME/.opencode/bin` - 預設備用路徑
+Rolandcode 在上游 OpenCode 之上维护一个小的补丁集。每个剥离提交移除一个遥测关注点：
+
+- `strip-posthog` — PostHog 分析
+- `strip-honeycomb` — Honeycomb 遥测
+- `strip-exa` — mcp.exa.ai 搜索转发
+- `strip-opencode-api` — api.opencode.ai 和 opncd.ai 端点
+- `strip-zen-gateway` — Zen 代理路由
+- `strip-app-proxy` — app.opencode.ai 通用代理
+- `strip-share-sync` — 自动会话共享
+- `strip-models-dev` — 运行时模型列表获取
+
+小型、孤立的提交在上游移动时可以干净地变基。
+
+## 测试
 
 ```bash
-# 範例
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+# 全套测试（以 root 运行时在 Docker 中运行权限测试）
+bash scripts/test.sh
+
+# 仅主测试套件
+cd packages/opencode && bun test --timeout 30000
+
+# 仅权限测试（必须是非 root，或使用 Docker）
+docker run --rm -v $(pwd):/app:ro -w /app/packages/opencode -u 1000:1000 --tmpfs /tmp:exec oven/bun:1.3.10 \
+  bun test test/tool/write.test.ts test/config/tui.test.ts --timeout 30000
 ```
 
-### Agents
+### 已知的测试问题
 
-OpenCode 內建了兩種 Agent，您可以使用 `Tab` 鍵快速切換。
+| 测试 | 状态 | 原因 |
+|------|--------|-----|
+| `session.llm.stream` (2 of 10) | 不稳定 | 模拟 HTTP 服务器状态在并行测试间泄漏。隔离运行时通过率为 10/10 (`bun test test/session/llm.test.ts`)。上游测试隔离 bug——非代码缺陷。 |
+| `tool.write > throws error when OS denies write access` | 以 root 身份运行失败 | root 绕过 `chmod 0o444`。在 Docker 中以非 root 身份运行通过。`scripts/test.sh` 会自动处理此问题。 |
+| `tui config > continues loading when legacy source cannot be stripped` | 以 root 身份运行失败 | 同样的 root 与 chmod 问题。在 Docker 中以非 root 身份运行通过。 |
+| `fsmonitor` (2 个测试) | 跳过 | 仅限 Windows (`process.platform === "win32"`)。 |
+| `worktree-remove` (1 个测试) | 跳过 | 仅限 Windows。 |
+| `unicode filenames modification and restore` | 跳过 | 上游明确跳过——已知 bug 尚未修复。 |
 
-- **build** - 預設模式，具備完整權限的 Agent，適用於開發工作。
-- **plan** - 唯讀模式，適用於程式碼分析與探索。
-  - 預設禁止修改檔案。
-  - 執行 bash 指令前會詢問權限。
-  - 非常適合用來探索陌生的程式碼庫或規劃變更。
+## 上游
 
-此外，OpenCode 還包含一個 **general** 子 Agent，用於處理複雜搜尋與多步驟任務。此 Agent 供系統內部使用，亦可透過在訊息中輸入 `@general` 來呼叫。
+这是 [anomalyco/opencode](https://github.com/anomalyco/opencode) 的一个分支（MIT 许可证）。所有原始代码归他们所有。完整的上游提交历史被保留——您可以确切看到更改了什么以及为什么。
 
-了解更多關於 [Agents](https://opencode.ai/docs/agents) 的資訊。
+OpenCode 是一个功能强大的 AI 编程代理，拥有出色的 TUI、LSP 支持和多提供商灵活性。我们使用它因为它是很好的软件。我们剥离遥测是因为隐私声明与行为不符。
 
-### 線上文件
+## 许可证
 
-關於如何設定 OpenCode 的詳細資訊，請參閱我們的 [**官方文件**](https://opencode.ai/docs)。
-
-### 參與貢獻
-
-如果您有興趣參與 OpenCode 的開發，請在提交 Pull Request 前先閱讀我們的 [貢獻指南 (Contributing Docs)](./CONTRIBUTING.md)。
-
-### 基於 OpenCode 進行開發
-
-如果您正在開發與 OpenCode 相關的專案，並在名稱中使用了 "opencode"（例如 "opencode-dashboard" 或 "opencode-mobile"），請在您的 README 中加入聲明，說明該專案並非由 OpenCode 團隊開發，且與我們沒有任何隸屬關係。
-
-### 常見問題 (FAQ)
-
-#### 這跟 Claude Code 有什麼不同？
-
-在功能面上與 Claude Code 非常相似。以下是關鍵差異：
-
-- 100% 開源。
-- 不綁定特定的服務提供商。雖然我們推薦使用透過 [OpenCode Zen](https://opencode.ai/zen) 提供的模型，但 OpenCode 也可搭配 Claude, OpenAI, Google 甚至本地模型使用。隨著模型不斷演進，彼此間的差距會縮小且價格會下降，因此具備「不限廠商 (provider-agnostic)」的特性至關重要。
-- 內建 LSP (語言伺服器協定) 支援。
-- 專注於終端機介面 (TUI)。OpenCode 由 Neovim 愛好者與 [terminal.shop](https://terminal.shop) 的創作者打造。我們將不斷挑戰終端機介面的極限。
-- 客戶端/伺服器架構 (Client/Server Architecture)。這讓 OpenCode 能夠在您的電腦上運行的同時，由行動裝置進行遠端操控。這意味著 TUI 前端只是眾多可能的客戶端之一。
-
----
-
-**加入我們的社群** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+MIT — 与上游相同。参见 [LICENSE](LICENSE)。

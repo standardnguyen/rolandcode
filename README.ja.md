@@ -1,18 +1,4 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">オープンソースのAIコーディングエージェント。</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
+# Rolandcode
 
 <p align="center">
   <a href="README.md">English</a> |
@@ -39,103 +25,104 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+[OpenCode](https://github.com/anomalyco/opencode) のクリーンなフォークです。すべてのテレメトリおよびフォーンホーム（外部への報告）機能が削除されています。
+
+OpenCode は自らを「プライバシーファースト」かつ「オープンソース」と宣伝していますが、実際には複数のサードパーティサービスへデータを静かに送信しています（分析用 PostHog、テレメトリ用 Honeycomb、セッション共有用 opncd.ai、プロンプトプロキシ用 opencode.ai/zen、検索クエリ転送用 mcp.exa.ai、IP 漏洩を伴うモデルリスト取得用 models.dev など）。メンテナは当初テレメトリの存在を否定していましたが（[#459](https://github.com/sst/opencode/issues/459)）、後に認めました。ユーザーは設定でテレメトリを無効にしても、外部への接続が完全に止まらないことを報告しています（[#5554](https://github.com/sst/opencode/issues/5554)）。
+
+Rolandcode は OpenCode に変更を促そうとはしません。単にテレメトリを削除し、クリーンなビルドを公開するだけです。
+
+名前はブラウニングの詩『チャイルド・ロランドは暗黒の塔に到達した』（*Childe Roland to the Dark Tower Came*）に由来します。ロランドは彼を止めるあらゆるもののせいで塔に到達しました。
 
 ---
 
-### インストール
+## 削除されたもの
+
+| エンドポイント | 送信された内容 |
+|----------|-------------|
+| `us.i.posthog.com` | 使用状況分析 |
+| `api.honeycomb.io` | テレメトリ、IP アドレス、所在地 |
+| `api.opencode.ai` | セッション内容、プロンプト |
+| `opncd.ai` | セッション共有データ |
+| `opencode.ai/zen/v1` | OpenCode のゲートウェイを経由してプロキシされたプロンプト |
+| `mcp.exa.ai` | 検索クエリ |
+| `models.dev` | モデルリスト取得（IP を漏洩） |
+| `app.opencode.ai` | キャッチオールアプリプロキシ |
+
+モデルカタログは、ビルド時にローカルのスナップショットからベンダー化されます。ランタイムでのフォーンホームはありません。
+
+## インストール
+
+[リリースページ](https://github.com/TODO/rolandcode/releases) からバイナリをダウンロードするか、ソースからビルドします：
 
 ```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
+git clone https://github.com/TODO/rolandcode.git
+cd rolandcode/packages/opencode
 
-# パッケージマネージャー
-npm i -g opencode-ai@latest        # bun/pnpm/yarn でもOK
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS と Linux（推奨。常に最新）
-brew install opencode              # macOS と Linux（公式 brew formula。更新頻度は低め）
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # どのOSでも
-nix run nixpkgs#opencode           # または github:anomalyco/opencode で最新 dev ブランチ
+# Download a model catalog snapshot
+curl -fsSL -o models-api.json https://models.dev/api.json
+
+# Build
+MODELS_DEV_API_JSON=./models-api.json bun run build --single
 ```
 
-> [!TIP]
-> インストール前に 0.1.x より古いバージョンを削除してください。
+バイナリは `dist/opencode-linux-x64/bin/rolandcode` にあります（または、プラットフォームに応じて同等の場所）。
 
-### デスクトップアプリ (BETA)
+## 検証
 
-OpenCode はデスクトップアプリとしても利用できます。[releases page](https://github.com/anomalyco/opencode/releases) から直接ダウンロードするか、[opencode.ai/download](https://opencode.ai/download) を利用してください。
-
-| プラットフォーム      | ダウンロード                          |
-| --------------------- | ------------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-darwin-aarch64.dmg` |
-| macOS (Intel)         | `opencode-desktop-darwin-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe`    |
-| Linux                 | `.deb`、`.rpm`、または AppImage       |
+すべてのビルドはクリーンであることを検証できます：
 
 ```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+bash scripts/verify-clean.sh
 ```
 
-#### インストールディレクトリ
+これは、既知のすべてのテレメトリドメインおよび SDK パッケージに対してソースツリー全体を grep します。参照が残っている場合、ビルドは失敗します。Grep は嘘をつきません。
 
-インストールスクリプトは、インストール先パスを次の優先順位で決定します。
+## 仕組み
 
-1. `$OPENCODE_INSTALL_DIR` - カスタムのインストールディレクトリ
-2. `$XDG_BIN_DIR` - XDG Base Directory Specification に準拠したパス
-3. `$HOME/bin` - 標準のユーザー用バイナリディレクトリ（存在する場合、または作成できる場合）
-4. `$HOME/.opencode/bin` - デフォルトのフォールバック
+Rolandcode は、アップストリームの OpenCode 上に小さなパッチセットを維持しています。各ストリップコミットは 1 つのテレメトリ関心領域を削除します：
+
+- `strip-posthog` — PostHog 分析
+- `strip-honeycomb` — Honeycomb テレメトリ
+- `strip-exa` — mcp.exa.ai 検索転送
+- `strip-opencode-api` — api.opencode.ai および opncd.ai エンドポイント
+- `strip-zen-gateway` — Zen プロキシルーティング
+- `strip-app-proxy` — app.opencode.ai キャッチオールプロキシ
+- `strip-share-sync` — 自動セッション共有
+- `strip-models-dev` — ランタイムモデルリスト取得
+
+小さな、分離されたコミットは、アップストリームが移動した際にクリーンにリベースできます。
+
+## テスト
 
 ```bash
-# 例
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+# Full suite (runs permission tests in Docker when running as root)
+bash scripts/test.sh
+
+# Just the main suite
+cd packages/opencode && bun test --timeout 30000
+
+# Just the permission tests (must be non-root, or use Docker)
+docker run --rm -v $(pwd):/app:ro -w /app/packages/opencode -u 1000:1000 --tmpfs /tmp:exec oven/bun:1.3.10 \
+  bun test test/tool/write.test.ts test/config/tui.test.ts --timeout 30000
 ```
 
-### Agents
+### 既知のテストの問題点
 
-OpenCode には組み込みの Agent が2つあり、`Tab` キーで切り替えられます。
+| テスト | ステータス | 理由 |
+|------|--------|-----|
+| `session.llm.stream` (10 のうち 2 つ) | 不安定 | モック HTTP サーバーの状態が並列テスト間で漏洩します。孤立して実行すると 10/10 でパスします（`bun test test/session/llm.test.ts`）。アップストリームのテスト分離バグであり、コードの欠陥ではありません。 |
+| `tool.write > OS が書き込みアクセスを拒否した際のエラースロー` | root として実行すると失敗 | root は `chmod 0o444` をバイパスします。Docker の非 root 環境ではパスします。`scripts/test.sh` がこれを自動的に処理します。 |
+| `tui config > レガシーソースをストリップできない場合の読み込み継続` | root として実行すると失敗 | 同じ root 対 chmod の問題。Docker の非 root 環境ではパスします。 |
+| `fsmonitor` (2 テスト) | スキップ | Windows 専用（`process.platform === "win32"`）。 |
+| `worktree-remove` (1 テスト) | スキップ | Windows 専用。 |
+| `ユニコードファイル名の修正と復元` | スキップ | アップストリームで明示的にスキップ済み — 修正されていない既知のバグ。 |
 
-- **build** - デフォルト。開発向けのフルアクセス Agent
-- **plan** - 分析とコード探索向けの読み取り専用 Agent
-  - デフォルトでファイル編集を拒否
-  - bash コマンド実行前に確認
-  - 未知のコードベース探索や変更計画に最適
+## アップストリーム
 
-また、複雑な検索やマルチステップのタスク向けに **general** サブ Agent も含まれています。
-内部的に使用されており、メッセージで `@general` と入力して呼び出せます。
+これは [anomalyco/opencode](https://github.com/anomalyco/opencode) のフォークです（MIT ライセンス）。すべての元のコードは彼らのものです。完全なアップストリームコミット履歴は保存されています — 何が変わり、なぜ変わったかが正確に見えます。
 
-[agents](https://opencode.ai/docs/agents) の詳細はこちら。
+OpenCode は、優れた TUI、LSP サポート、マルチプロバイダーの柔軟性を備えた有能な AI コーディングエージェントです。良いソフトウェアなので使用しています。プライバシーの主張が実際の動作と一致しないので、テレメトリを削除しています。
 
-### ドキュメント
+## ライセンス
 
-OpenCode の設定については [**ドキュメント**](https://opencode.ai/docs) を参照してください。
-
-### コントリビュート
-
-OpenCode に貢献したい場合は、Pull Request を送る前に [contributing docs](./CONTRIBUTING.md) を読んでください。
-
-### OpenCode の上に構築する
-
-OpenCode に関連するプロジェクトで、名前に "opencode"（例: "opencode-dashboard" や "opencode-mobile"）を含める場合は、そのプロジェクトが OpenCode チームによって作られたものではなく、いかなる形でも関係がないことを README に明記してください。
-
-### FAQ
-
-#### Claude Code との違いは？
-
-機能面では Claude Code と非常に似ています。主な違いは次のとおりです。
-
-- 100% オープンソース
-- 特定のプロバイダーに依存しません。[OpenCode Zen](https://opencode.ai/zen) で提供しているモデルを推奨しますが、OpenCode は Claude、OpenAI、Google、またはローカルモデルでも利用できます。モデルが進化すると差は縮まり価格も下がるため、provider-agnostic であることが重要です。
-- そのまま使える LSP サポート
-- TUI にフォーカス。OpenCode は neovim ユーザーと [terminal.shop](https://terminal.shop) の制作者によって作られており、ターミナルで可能なことの限界を押し広げます。
-- クライアント/サーバー構成。例えば OpenCode をあなたのPCで動かし、モバイルアプリからリモート操作できます。TUI フロントエンドは複数あるクライアントの1つにすぎません。
-
----
-
-**コミュニティに参加** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+MIT — アップストリームと同じ。[LICENSE](LICENSE) を参照。

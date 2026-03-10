@@ -1,5 +1,30 @@
 # Rolandcode
 
+<p align="center">
+  <a href="README.md">English</a> |
+  <a href="README.zh.md">简体中文</a> |
+  <a href="README.zht.md">繁體中文</a> |
+  <a href="README.ko.md">한국어</a> |
+  <a href="README.de.md">Deutsch</a> |
+  <a href="README.es.md">Español</a> |
+  <a href="README.fr.md">Français</a> |
+  <a href="README.it.md">Italiano</a> |
+  <a href="README.da.md">Dansk</a> |
+  <a href="README.ja.md">日本語</a> |
+  <a href="README.pl.md">Polski</a> |
+  <a href="README.ru.md">Русский</a> |
+  <a href="README.bs.md">Bosanski</a> |
+  <a href="README.ar.md">العربية</a> |
+  <a href="README.no.md">Norsk</a> |
+  <a href="README.br.md">Português (Brasil)</a> |
+  <a href="README.th.md">ไทย</a> |
+  <a href="README.tr.md">Türkçe</a> |
+  <a href="README.uk.md">Українська</a> |
+  <a href="README.bn.md">বাংলা</a> |
+  <a href="README.gr.md">Ελληνικά</a> |
+  <a href="README.vi.md">Tiếng Việt</a>
+</p>
+
 A clean fork of [OpenCode](https://github.com/anomalyco/opencode) with all telemetry and phone-home behavior removed.
 
 OpenCode markets itself as "privacy-first" and "open source," but silently transmits data to multiple third-party services — analytics (PostHog), telemetry (Honeycomb), session sharing (opncd.ai), prompt proxying (opencode.ai/zen), search query forwarding (mcp.exa.ai), and IP-leaking model list fetches (models.dev). The maintainers initially denied telemetry existed ([#459](https://github.com/sst/opencode/issues/459)), then acknowledged it. Users report that disabling telemetry in config doesn't fully stop outbound connections ([#5554](https://github.com/sst/opencode/issues/5554)).
