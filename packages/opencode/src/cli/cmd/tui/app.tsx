@@ -49,7 +49,10 @@ async function getTerminalBackgroundColor(): Promise<"dark" | "light"> {
     let timeout: NodeJS.Timeout
 
     const cleanup = () => {
-      process.stdin.setRawMode(false)
+      // Note: intentionally not calling setRawMode(false) here.
+      // Toggling raw mode off creates a PTY echo window where late-arriving
+      // OSC responses (from SSH-delayed terminal color queries) get echoed
+      // as visible garbage. The renderer sets raw mode on init anyway.
       process.stdin.removeListener("data", handler)
       clearTimeout(timeout)
     }
@@ -203,6 +206,45 @@ function App() {
   const dimensions = useTerminalDimensions()
   const renderer = useRenderer()
   renderer.disableStdoutInterception()
+
+  // Filter OSC color responses from the input pipeline. Terminal palette queries
+  // (OSC 4, 10-19) generate responses handled by opentui's TerminalPalette
+  // listener, but those responses also flow through the renderer's input
+  // handlers. Over SSH, they arrive asynchronously and the key handler renders
+  // them as visible garbage. Consuming them here is harmless — TerminalPalette
+  // receives its own copy via a separate stdin listener.
+  //
+  // The input buffer has a 10ms flush timeout. Over SSH, responses can be split
+  // across TCP segments, causing an incomplete OSC prefix (e.g. "\x1b]12;rgb")
+  // to be flushed before the rest (":eeee/eeee/eeee\x1b\") arrives. We use a
+  // state machine to track when we're mid-response and consume the remainder.
+  let oscConsuming = false
+  renderer.prependInputHandler((sequence: string) => {
+    // If we're consuming the tail of a split OSC response, eat everything
+    // until we see a terminator (BEL or ST)
+    if (oscConsuming) {
+      if (sequence.includes("\x07") || sequence.includes("\x1b\\")) {
+        oscConsuming = false
+      }
+      return true
+    }
+    // Complete OSC color response — consume it
+    if (/\x1b\]\d+(?:;\d+)?;(?:rgb:|#[0-9a-fA-F])/.test(sequence)) {
+      // Check if this sequence has a terminator — if not, it was flushed
+      // incomplete and we need to consume subsequent chunks too
+      if (!sequence.includes("\x07") && !sequence.endsWith("\x1b\\")) {
+        oscConsuming = true
+      }
+      return true
+    }
+    // Incomplete OSC prefix flushed by timeout (e.g. "\x1b]12;rgb" without colon)
+    if (/^\x1b\]\d+(?:;\d+)?;(?:rgb|#)/.test(sequence)) {
+      oscConsuming = true
+      return true
+    }
+    return false
+  })
+
   const dialog = useDialog()
   const local = useLocal()
   const kv = useKV()
@@ -254,10 +296,6 @@ function App() {
     renderer.clearSelection()
   }
   const [terminalTitleEnabled, setTerminalTitleEnabled] = createSignal(kv.get("terminal_title_enabled", true))
-
-  createEffect(() => {
-    console.log(JSON.stringify(route.data))
-  })
 
   // Update terminal window title based on current route and session
   createEffect(() => {

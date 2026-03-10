@@ -286,6 +286,7 @@ export namespace Snapshot {
       .cwd(Instance.worktree)
       .nothrow()
       .text()
+      .catch(() => "")
     if (!file.trim()) return
     const exists = await fs
       .stat(file.trim())
