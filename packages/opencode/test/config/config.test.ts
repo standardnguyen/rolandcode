@@ -655,6 +655,8 @@ test("gets config directories", async () => {
 
 test("does not try to install dependencies in read-only OPENCODE_CONFIG_DIR", async () => {
   if (process.platform === "win32") return
+  // Root bypasses filesystem permission checks, so chmod 0o555 has no effect
+  if (process.getuid?.() === 0) return
 
   await using tmp = await tmpdir<string>({
     init: async (dir) => {
