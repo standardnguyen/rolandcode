@@ -395,7 +395,7 @@ export namespace File {
       cache = result
       fetching = false
     }
-    fn(cache)
+    fn(cache).catch(() => {})
 
     return {
       async files() {
@@ -403,7 +403,7 @@ export namespace File {
           fn({
             files: [],
             dirs: [],
-          })
+          }).catch(() => {})
         }
         return cache
       },
