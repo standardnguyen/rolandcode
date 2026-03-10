@@ -41,22 +41,28 @@ jobs:
       - name: Run test suite
         run: |
           cd packages/opencode
-          # Exclude tests that need non-root or are flaky in CI
+          # Exclude tests that need non-root or are flaky in CI:
+          #   write.test.ts, tui.test.ts  - need non-root for permission checks
+          #   auth-override.test.ts       - flaky plugin setup timing in CI
           TEST_FILES=$(find test -name '*.test.ts' \
             ! -path '*/tool/write.test.ts' \
             ! -path '*/config/tui.test.ts' \
             ! -path '*/plugin/auth-override.test.ts' | sort)
-          # Disable -e/pipefail so the flaky-test filter can run after bun test
+          # Disable -e/pipefail so the flaky-test filter below actually runs.
+          # Without this, set -e kills the script at the pipe before EXIT is captured.
           set +eo pipefail
           $HOME/.bun/bin/bun test --timeout 30000 $TEST_FILES 2>&1 | tee /tmp/test-output.log
           EXIT=${PIPESTATUS[0]}
           set -eo pipefail
-          # Allow known flaky tests (test isolation bug, not a code defect)
+          # Allow known flaky session.llm.stream tests (test isolation bug).
+          # Use sort -u because bun prints (fail) lines both inline and in summary.
           if [ "$EXIT" -ne 0 ]; then
-            REAL_FAILS=$(grep "^(fail)" /tmp/test-output.log \
+            REAL_FAILS=$(grep "^(fail)" /tmp/test-output.log | sort -u \
               | grep -cv "session.llm.stream" || true)
             if [ "$REAL_FAILS" -gt 0 ]; then
-              echo "::error::$REAL_FAILS non-flaky test failures detected"
+              echo "::error::$REAL_FAILS non-flaky test failure(s):"
+              grep "^(fail)" /tmp/test-output.log | sort -u \
+                | grep -v "session.llm.stream" || true
               exit 1
             fi
             echo "::warning::Only flaky LLM stream tests failed (test isolation issue)"
