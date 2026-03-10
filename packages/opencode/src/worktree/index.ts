@@ -331,7 +331,7 @@ export namespace Worktree {
 
       void start().catch((error) => {
         log.error("worktree start task failed", { directory, error })
-      })
+      }).catch(() => {})
     }, 0)
   }
 
@@ -416,7 +416,7 @@ export namespace Worktree {
 
       return start().catch((error) => {
         log.error("worktree start task failed", { directory: info.directory, error })
-      })
+      }).catch(() => {})
     }
   }
 

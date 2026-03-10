@@ -404,7 +404,7 @@ export namespace Snapshot {
     const file = await Process.text(["git", "rev-parse", "--path-format=absolute", "--git-path", "info/exclude"], {
       cwd: Instance.worktree,
       nothrow: true,
-    }).then((x) => x.text)
+    }).then((x) => x.text).catch(() => "")
     if (!file.trim()) return
     const exists = await fs
       .stat(file.trim())

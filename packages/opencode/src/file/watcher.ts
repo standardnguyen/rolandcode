@@ -66,9 +66,9 @@ export namespace FileWatcher {
       const subscribe: ParcelWatcher.SubscribeCallback = (err, evts) => {
         if (err) return
         for (const evt of evts) {
-          if (evt.type === "create") Bus.publish(Event.Updated, { file: evt.path, event: "add" })
-          if (evt.type === "update") Bus.publish(Event.Updated, { file: evt.path, event: "change" })
-          if (evt.type === "delete") Bus.publish(Event.Updated, { file: evt.path, event: "unlink" })
+          if (evt.type === "create") Bus.publish(Event.Updated, { file: evt.path, event: "add" }).catch(() => {})
+          if (evt.type === "update") Bus.publish(Event.Updated, { file: evt.path, event: "change" }).catch(() => {})
+          if (evt.type === "delete") Bus.publish(Event.Updated, { file: evt.path, event: "unlink" }).catch(() => {})
         }
       }
 
