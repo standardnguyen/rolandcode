@@ -26,13 +26,20 @@ concurrency:
 jobs:
   build:
     name: storybook build
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: docker
+    container:
+      image: node:20-bookworm
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Bun
-        uses: ./.github/actions/setup-bun
+      - name: Install bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: $HOME/.bun/bin/bun install
 
       - name: Build Storybook
-        run: bun --cwd packages/storybook build
+        run: $HOME/.bun/bin/bun --cwd packages/storybook build
