@@ -1,0 +1,45 @@
+name: storybook
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - ".github/workflows/storybook.yml"
+      - "package.json"
+      - "bun.lock"
+      - "packages/storybook/**"
+      - "packages/ui/**"
+  pull_request:
+    branches: [dev]
+    paths:
+      - ".github/workflows/storybook.yml"
+      - "package.json"
+      - "bun.lock"
+      - "packages/storybook/**"
+      - "packages/ui/**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: storybook build
+    runs-on: docker
+    container:
+      image: node:20-bookworm
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install bun
+        run: |
+          curl -fsSL https://bun.sh/install | bash
+          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: $HOME/.bun/bin/bun install
+
+      - name: Build Storybook
+        run: $HOME/.bun/bin/bun --cwd packages/storybook build
