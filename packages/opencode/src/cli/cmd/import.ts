@@ -108,16 +108,15 @@ export const ImportCommand = cmd({
 
         const parsed = new URL(args.file)
         const baseUrl = parsed.origin
-        const req = await ShareNext.request()
-        const headers = shouldAttachShareAuthHeaders(args.file, req.baseUrl) ? req.headers : {}
+        const headers: Record<string, string> = {}
 
-        const dataPath = req.api.data(slug)
+        const dataPath = `/api/share/${slug}/data`
         let response = await fetch(`${baseUrl}${dataPath}`, {
           headers,
         })
 
-        if (!response.ok && dataPath !== `/api/share/${slug}/data`) {
-          response = await fetch(`${baseUrl}/api/share/${slug}/data`, {
+        if (!response.ok) {
+          response = await fetch(`${baseUrl}/api/shares/${slug}/data`, {
             headers,
           })
         }
