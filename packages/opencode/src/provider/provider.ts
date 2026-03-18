@@ -1154,7 +1154,7 @@ export namespace Provider {
         if (!url) return
 
         // some models/providers have variable urls, ex: "https://${AZURE_RESOURCE_NAME}.services.ai.azure.com/anthropic/v1"
-        // We track this in models.dev, and then when we are resolving the baseURL
+        // We track this in the model catalog, and then when we are resolving the baseURL
         // we need to string replace that literal: "${AZURE_RESOURCE_NAME}"
         const loader = s.varsLoaders[model.providerID]
         if (loader) {
