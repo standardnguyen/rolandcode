@@ -27,7 +27,13 @@ The model catalog is vendored at build time from a local snapshot — no runtime
 
 ## Installation
 
-Download a binary from the [releases page](https://github.com/standardnguyen/rolandcode/releases), or build from source:
+Download a binary from the [releases page](https://github.com/standardnguyen/rolandcode/releases), or run with Docker:
+
+```bash
+docker run --rm -it -v "$PWD:/workspace" -w /workspace ghcr.io/standardnguyen/rolandcode
+```
+
+### Building from source
 
 ```bash
 git clone https://github.com/standardnguyen/rolandcode.git
@@ -67,6 +73,15 @@ bash scripts/verify-clean.sh
 
 # Run it
 ./packages/opencode/dist/opencode-linux-x64/bin/rolandcode
+```
+
+Or build with Docker (no Bun required):
+
+```bash
+git clone https://github.com/standardnguyen/rolandcode.git
+cd rolandcode
+docker build -t rolandcode .
+docker run --rm -it -v "$PWD:/workspace" -w /workspace rolandcode
 ```
 
 ## Verification

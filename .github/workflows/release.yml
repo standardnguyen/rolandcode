@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 jobs:
   verify-and-release:
@@ -115,3 +116,17 @@ jobs:
 
           echo ""
           echo "Release published: https://github.com/${{ github.repository }}/releases/tag/${TAG}"
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push Docker image
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          IMAGE=ghcr.io/${{ github.repository }}
+
+          docker build -t "${IMAGE}:${TAG}" -t "${IMAGE}:latest" .
+          docker push "${IMAGE}:${TAG}"
+          docker push "${IMAGE}:latest"
+
+          echo "Docker image published: ${IMAGE}:${TAG}"
