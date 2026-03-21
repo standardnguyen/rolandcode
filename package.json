@@ -10,6 +10,7 @@
     "dev:desktop": "bun --cwd packages/desktop tauri dev",
     "dev:web": "bun --cwd packages/app dev",
     "dev:storybook": "bun --cwd packages/storybook storybook",
+    "build": "MODELS_DEV_API_JSON=${MODELS_DEV_API_JSON:-test/tool/fixtures/models-api.json} bun run --cwd packages/opencode build --single",
     "typecheck": "bun turbo typecheck",
     "prepare": "husky",
     "random": "echo 'Random script'",
