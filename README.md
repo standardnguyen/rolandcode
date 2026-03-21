@@ -43,6 +43,32 @@ MODELS_DEV_API_JSON=$PWD/models-api.json bun run --cwd packages/opencode build -
 
 The binary is at `packages/opencode/dist/opencode-linux-x64/bin/rolandcode` (or the equivalent for your platform).
 
+### Building from a fresh Debian container
+
+If you're starting from a bare Debian 12 install (container, VM, or cloud instance):
+
+```bash
+# Prerequisites
+apt-get update && apt-get install -y git curl unzip
+
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+source ~/.bashrc
+
+# Build from source
+git clone https://github.com/standardnguyen/rolandcode.git
+cd rolandcode
+bun install
+curl -fsSL -o models-api.json https://models.dev/api.json
+MODELS_DEV_API_JSON=$PWD/models-api.json bun run --cwd packages/opencode build --single
+
+# Verify it's clean
+bash scripts/verify-clean.sh
+
+# Run it
+./packages/opencode/dist/opencode-linux-x64/bin/rolandcode
+```
+
 ## Verification
 
 Every build can be verified clean:
