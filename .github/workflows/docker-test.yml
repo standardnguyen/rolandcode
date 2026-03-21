@@ -3,12 +3,14 @@ on:
   push:
     branches: [dev]
     paths:
+      - .github/workflows/docker-test.yml
       - Dockerfile
       - .dockerignore
       - "packages/opencode/**"
       - "packages/script/**"
   pull_request:
     paths:
+      - .github/workflows/docker-test.yml
       - Dockerfile
       - .dockerignore
       - "packages/opencode/**"
