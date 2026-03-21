@@ -27,10 +27,10 @@ The model catalog is vendored at build time from a local snapshot — no runtime
 
 ## Installation
 
-Download a binary from the [releases page](https://github.com/TODO/rolandcode/releases), or build from source:
+Download a binary from the [releases page](https://github.com/standardnguyen/rolandcode/releases), or build from source:
 
 ```bash
-git clone https://github.com/TODO/rolandcode.git
+git clone https://github.com/standardnguyen/rolandcode.git
 cd rolandcode/packages/opencode
 
 # Download a model catalog snapshot
