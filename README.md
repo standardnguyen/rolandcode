@@ -38,7 +38,7 @@ bun install
 curl -fsSL -o models-api.json https://models.dev/api.json
 
 # Build
-MODELS_DEV_API_JSON=./models-api.json bun run --cwd packages/opencode build --single
+MODELS_DEV_API_JSON=$PWD/models-api.json bun run --cwd packages/opencode build --single
 ```
 
 The binary is at `packages/opencode/dist/opencode-linux-x64/bin/rolandcode` (or the equivalent for your platform).
