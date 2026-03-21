@@ -31,16 +31,17 @@ Download a binary from the [releases page](https://github.com/standardnguyen/rol
 
 ```bash
 git clone https://github.com/standardnguyen/rolandcode.git
-cd rolandcode/packages/opencode
+cd rolandcode
+bun install
 
 # Download a model catalog snapshot
 curl -fsSL -o models-api.json https://models.dev/api.json
 
 # Build
-MODELS_DEV_API_JSON=./models-api.json bun run build --single
+MODELS_DEV_API_JSON=./models-api.json bun run --cwd packages/opencode build --single
 ```
 
-The binary is at `dist/opencode-linux-x64/bin/rolandcode` (or the equivalent for your platform).
+The binary is at `packages/opencode/dist/opencode-linux-x64/bin/rolandcode` (or the equivalent for your platform).
 
 ## Verification
 
