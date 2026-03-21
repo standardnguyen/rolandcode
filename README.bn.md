@@ -1,18 +1,4 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">ওপেন সোর্স এআই কোডিং এজেন্ট।</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
+# Rolandcode
 
 <p align="center">
   <a href="README.md">English</a> |
@@ -39,103 +25,102 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+[OpenCode]-এর একটি পরিষ্কার ফর্ক যেখানে সমস্ত টেলিমিট্রি এবং ফোন-হোম আচরণ অপসারণ করা হয়েছে।
 
----
+OpenCode নিজেকে "গোপনীয়তা-প্রথম" এবং "ওপেন সোর্স" হিসেবে প্রচার করে, কিন্তু নীরবে একাধিক তৃতীয় পক্ষের সার্ভিসে ডেটা পাঠায় — বিশ্লেষণ (PostHog), টেলিমিট্রি (Honeycomb), সেশন শেয়ারিং (opncd.ai), প্রম্পট প্রক্সি (opencode.ai/zen), সার্চ কোয়েরি ফরওয়ার্ডিং (mcp.exa.ai), এবং আইপি-লিকিং মডেল লিস্ট ফেচ (models.dev)। মেইনটেইনাররা প্রাথমিকভাবে অস্বীকার করেছিলেন যে টেলিমিট্রি বিদ্যমান ([#459](https://github.com/sst/opencode/issues/459)), পরে তারা এটি স্বীকার করেন। ব্যবহারকারীরা রিপোর্ট করেছেন যে কনফিগ-তে টেলিমিট্রি নিষ্ক্রিয় করলেও আউটবাইন্ড সংযোগ পুরোপুরি থামে না ([#5554](https://github.com/sst/opencode/issues/5554))।
 
-### ইনস্টলেশন (Installation)
+Rolandcode OpenCode-কে পরিবর্তন করতে রাজি করানোর চেষ্টা করে না। এটি শুধুমাত্র তাদের টেলিমিট্রি অপসারণ করে পরিষ্কার বিল্ড শিপ করে।
 
-```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
+নামটি ব্রাউনিংয়ের *Childe Roland to the Dark Tower Came*-এর থেকে — রোল্যান্ড সব কিছুকে থামানোর চেষ্টার পরেও টাওয়ারে পৌঁছায়।
 
-# Package managers
-npm i -g opencode-ai@latest        # or bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS and Linux (recommended, always up to date)
-brew install opencode              # macOS and Linux (official brew formula, updated less)
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # Any OS
-nix run nixpkgs#opencode           # or github:anomalyco/opencode for latest dev branch
-```
+## কী অপসারণ করা হয়েছে
 
-> [!TIP]
-> ইনস্টল করার আগে ০.১.x এর চেয়ে পুরোনো ভার্সনগুলো মুছে ফেলুন।
+| এন্ডপয়েন্ট | কী পাঠানো হতো |
+|----------|-------------|
+| `us.i.posthog.com` | ব্যবহার বিশ্লেষণ |
+| `api.honeycomb.io` | টেলিমিট্রি, আইপি ঠিকানা, অবস্থান |
+| `api.opencode.ai` | সেশন কন্টেন্ট, প্রম্পট |
+| `opncd.ai` | সেশন শেয়ারিং ডেটা |
+| `opencode.ai/zen/v1` | OpenCode-এর গেটওয়ে-র মাধ্যমে প্রক্সি করা প্রম্পট |
+| `mcp.exa.ai` | সার্চ কোয়েরি |
+| `models.dev` | মডেল লিস্ট ফেচ (আইপি লিক করে) |
+| `app.opencode.ai` | ক্যাচ-অল অ্যাপ প্রক্সি |
 
-### ডেস্কটপ অ্যাপ (BETA)
+মডেল ক্যাটালগ বিল্ডের সময় একটি স্থানীয় স্ন্যাপশট থেকে ভেন্ডর করা হয় — কোনো রানটাইম ফোন-হোম নেই।
 
-OpenCode ডেস্কটপ অ্যাপ্লিকেশন হিসেবেও উপলব্ধ। সরাসরি [রিলিজ পেজ](https://github.com/anomalyco/opencode/releases) অথবা [opencode.ai/download](https://opencode.ai/download) থেকে ডাউনলোড করুন।
+## ইনস্টলেশন
 
-| প্ল্যাটফর্ম           | ডাউনলোড                               |
-| --------------------- | ------------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-darwin-aarch64.dmg` |
-| macOS (Intel)         | `opencode-desktop-darwin-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe`    |
-| Linux                 | `.deb`, `.rpm`, or AppImage           |
+[রিলিজ পেজ](https://github.com/TODO/rolandcode/releases) থেকে একটি বাইনারি ডাউনলোড করুন, অথবা সোর্স থেকে বিল্ড করুন:
 
 ```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+git clone https://github.com/TODO/rolandcode.git
+cd rolandcode/packages/opencode
+
+# একটি মডেল ক্যাটালগ স্ন্যাপশট ডাউনলোড করুন
+curl -fsSL -o models-api.json https://models.dev/api.json
+
+# বিল্ড করুন
+MODELS_DEV_API_JSON=./models-api.json bun run build --single
 ```
 
-#### ইনস্টলেশন ডিরেক্টরি (Installation Directory)
+বাইনারিটি `dist/opencode-linux-x64/bin/rolandcode`-এ অবস্থিত (অথবা আপনার প্ল্যাটফর্মের জন্য সমমানের)।
 
-ইনস্টল স্ক্রিপ্টটি ইনস্টলেশন পাতের জন্য নিম্নলিখিত অগ্রাধিকার ক্রম মেনে চলে:
+## যাচাই
 
-1. `$OPENCODE_INSTALL_DIR` - কাস্টম ইনস্টলেশন ডিরেক্টরি
-2. `$XDG_BIN_DIR` - XDG বেস ডিরেক্টরি স্পেসিফিকেশন সমর্থিত পাথ
-3. `$HOME/bin` - সাধারণ ব্যবহারকারী বাইনারি ডিরেক্টরি (যদি বিদ্যমান থাকে বা তৈরি করা যায়)
-4. `$HOME/.opencode/bin` - ডিফল্ট ফলব্যাক
+প্রতিটি বিল্ড পরিষ্কার হিসেবে যাচাই করা যায়:
 
 ```bash
-# উদাহরণ
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+bash scripts/verify-clean.sh
 ```
 
-### এজেন্টস (Agents)
+এটি সমস্ত পরিচিত টেলিমিট্রি ডোমেইন এবং এসডিকে প্যাকেজের জন্য পুরো সোর্স ট্রি-তে গ্রিপ করে। যদি কোনো রেফারেন্স থাকে, বিল্ড ব্যর্থ হয়। গ্রিপ মিথ্যা বলে না।
 
-OpenCode এ দুটি বিল্ট-ইন এজেন্ট রয়েছে যা আপনি `Tab` কি(key) দিয়ে পরিবর্তন করতে পারবেন।
+## এটি কীভাবে কাজ করে
 
-- **build** - ডিফল্ট, ডেভেলপমেন্টের কাজের জন্য সম্পূর্ণ অ্যাক্সেসযুক্ত এজেন্ট
-- **plan** - বিশ্লেষণ এবং কোড এক্সপ্লোরেশনের জন্য রিড-ওনলি এজেন্ট
-  - ডিফল্টভাবে ফাইল এডিট করতে দেয় না
-  - ব্যাশ কমান্ড চালানোর আগে অনুমতি চায়
-  - অপরিচিত কোডবেস এক্সপ্লোর করা বা পরিবর্তনের পরিকল্পনা করার জন্য আদর্শ
+Rolandcode আপস্ট্রিম OpenCode-এর উপরে একটি ছোট প্যাচ সেট বজায় রাখে। প্রতিটি স্ট্রিপ কমিট একটি টেলিমিট্রি বিষয় অপসারণ করে:
 
-এছাড়াও জটিল অনুসন্ধান এবং মাল্টিস্টেপ টাস্কের জন্য একটি **general** সাবএজেন্ট অন্তর্ভুক্ত রয়েছে।
-এটি অভ্যন্তরীণভাবে ব্যবহৃত হয় এবং মেসেজে `@general` লিখে ব্যবহার করা যেতে পারে।
+- `strip-posthog` — PostHog বিশ্লেষণ
+- `strip-honeycomb` — Honeycomb টেলিমিট্রি
+- `strip-exa` — mcp.exa.ai সার্চ ফরওয়ার্ডিং
+- `strip-opencode-api` — api.opencode.ai এবং opncd.ai এন্ডপয়েন্ট
+- `strip-zen-gateway` — Zen প্রক্সি রাউটিং
+- `strip-app-proxy` — app.opencode.ai ক্যাচ-অল প্রক্সি
+- `strip-share-sync` — স্বয়ংক্রিয় সেশন শেয়ারিং
+- `strip-models-dev` — রানটাইম মডেল লিস্ট ফেচিং
 
-এজেন্টদের সম্পর্কে আরও জানুন: [docs](https://opencode.ai/docs/agents)।
+ছোট, বিচ্ছিন্ন কমিট আপস্ট্রিম যখন সরে যায় তখন পরিষ্কারভাবে রিবেজ হয়।
 
-### ডকুমেন্টেশন (Documentation)
+## টেস্টিং
 
-কিভাবে OpenCode কনফিগার করবেন সে সম্পর্কে আরও তথ্যের জন্য, [**আমাদের ডকস দেখুন**](https://opencode.ai/docs)।
+```bash
+# পূর্ণ সুট (রুট হিসেবে রান করার সময় ডকারে অনুমতি টেস্ট চালায়)
+bash scripts/test.sh
 
-### অবদান (Contributing)
+# শুধুমাত্র প্রধান সুট
+cd packages/opencode && bun test --timeout 30000
 
-আপনি যদি OpenCode এ অবদান রাখতে চান, অনুগ্রহ করে একটি পুল রিকোয়েস্ট সাবমিট করার আগে আমাদের [কন্ট্রিবিউটিং ডকস](./CONTRIBUTING.md) পড়ে নিন।
+# শুধুমাত্র অনুমতি টেস্ট (রুট-হীন হতে হবে, অথবা ডকার ব্যবহার করুন)
+docker run --rm -v $(pwd):/app:ro -w /app/packages/opencode -u 1000:1000 --tmpfs /tmp:exec oven/bun:1.3.10 \
+  bun test test/tool/write.test.ts test/config/tui.test.ts --timeout 30000
+```
 
-### OpenCode এর উপর বিল্ডিং (Building on OpenCode)
+### জানা টেস্ট ইস্যু
 
-আপনি যদি এমন প্রজেক্টে কাজ করেন যা OpenCode এর সাথে সম্পর্কিত এবং প্রজেক্টের নামের অংশ হিসেবে "opencode" ব্যবহার করেন, উদাহরণস্বরূপ "opencode-dashboard" বা "opencode-mobile", তবে দয়া করে আপনার README তে একটি নোট যোগ করে স্পষ্ট করুন যে এই প্রজেক্টটি OpenCode দল দ্বারা তৈরি হয়নি এবং আমাদের সাথে এর কোনো সরাসরি সম্পর্ক নেই।
+| টেস্ট | অবস্থা | কারণ |
+|------|--------|-----|
+| `session.llm.stream` (১০-এর মধ্যে ২টি) | অস্থির | সমান্তরাল টেস্টের মধ্যে মক HTTP সার্ভার অবস্থা লিক করে। বিচ্ছিন্নভাবে চালানো হলে ১০/১০ পাস করে (`bun test test/session/llm.test.ts`)। আপস্ট্রিম টেস্ট বিচ্ছিন্নতা বাগ — কোডের ত্রুটি নয়। |
+| `tool.write > OS লেখা অ্যাক্সেস প্রত্যাখ্যান করলে ত্রুটি ফেলে` | রুট হিসেবে ব্যর্থ | রুট `chmod 0o444` বাইপাস করে। ডকারে রুট-হীন হিসেবে পাস করে। `scripts/test.sh` এটি স্বয়ংক্রিয়ভাবে পরিচালনা করে। |
+| `tui config > লেগেসি সোর্স অপসারণ করা না গেলে লোডিং চালিয়ে যায়` | রুট হিসেবে ব্যর্থ | একই রুট-বনাম-chmod ইস্যু। ডকারে রুট-হীন হিসেবে পাস করে। |
+| `fsmonitor` (২টি টেস্ট) | স্কিপ | উইন্ডোজ-এর জন্য (`process.platform === "win32"`). |
+| `worktree-remove` (১টি টেস্ট) | স্কিপ | উইন্ডোজ-এর জন্য। |
+| `unicode filenames modification and restore` | স্কিপ | আপস্ট্রিম স্পষ্টভাবে স্কিপ করেছে — তারা ঠিক করেননি এমন একটি জানা বাগ। |
 
-### সচরাচর জিজ্ঞাসিত প্রশ্নাবলী (FAQ)
+## আপস্ট্রিম
 
-#### এটি ক্লড কোড (Claude Code) থেকে কীভাবে আলাদা?
+এটি [anomalyco/opencode]-এর একটি ফর্ক (MIT লাইসেন্স)। সমস্ত মূল কোড তাদের। পুরো আপস্ট্রিম কমিট ইতিহাস সংরক্ষিত — আপনি ঠিক কী পরিবর্তন হয়েছে এবং কেন তা দেখতে পারেন।
 
-ক্যাপাবিলিটির দিক থেকে এটি ক্লড কোডের (Claude Code) মতই। এখানে মূল পার্থক্যগুলো দেওয়া হলো:
+OpenCode একটি সক্ষম এআই কোডিং এজেন্ট যার চমৎকার টিইউআই, এলএসপি সাপোর্ট, এবং মাল্টি-প্রোভাইডার নমনীয়তা আছে। আমরা এটি ব্যবহার করি কারণ এটি ভালো সফটওয়্যার। আমরা টেলিমিট্রি অপসারণ করি কারণ গোপনীয়তার দাবি আচরণের সাথে মিলে না।
 
-- ১০০% ওপেন সোর্স
-- কোনো প্রোভাইডারের সাথে আবদ্ধ নয়। যদিও আমরা [OpenCode Zen](https://opencode.ai/zen) এর মাধ্যমে মডেলসমূহ ব্যবহারের পরামর্শ দিই, OpenCode ক্লড (Claude), ওপেনএআই (OpenAI), গুগল (Google), অথবা লোকাল মডেলগুলোর সাথেও ব্যবহার করা যেতে পারে। যেমন যেমন মডেলগুলো উন্নত হবে, তাদের মধ্যকার পার্থক্য কমে আসবে এবং দামও কমবে, তাই প্রোভাইডার-অজ্ঞাস্টিক হওয়া খুবই গুরুত্বপূর্ণ।
-- আউট-অফ-দ্য-বক্স LSP সাপোর্ট
-- TUI এর উপর ফোকাস। OpenCode নিওভিম (neovim) ব্যবহারকারী এবং [terminal.shop](https://terminal.shop) এর নির্মাতাদের দ্বারা তৈরি; আমরা টার্মিনালে কী কী সম্ভব তার সীমাবদ্ধতা ছাড়িয়ে যাওয়ার চেষ্টা করছি।
-- ক্লায়েন্ট/সার্ভার আর্কিটেকচার। এটি যেমন OpenCode কে আপনার কম্পিউটারে চালানোর সুযোগ দেয়, তেমনি আপনি মোবাইল অ্যাপ থেকে রিমোটলি এটি নিয়ন্ত্রণ করতে পারবেন, অর্থাৎ TUI ফ্রন্টএন্ড কেবল সম্ভাব্য ক্লায়েন্টগুলোর মধ্যে একটি।
+## লাইসেন্স
 
----
-
-**আমাদের কমিউনিটিতে যুক্ত হোন** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+MIT — আপস্ট্রিমের মতো। দেখুন [LICENSE](LICENSE)।
