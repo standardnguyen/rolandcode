@@ -7,13 +7,14 @@ on:
 jobs:
   auto-tag:
     name: Tag next clean release
-    runs-on: docker
-    container:
-      image: node:20-bookworm
+    runs-on: ubuntu-latest
     steps:
+      # Use PAT so the tag push triggers the release workflow.
+      # GITHUB_TOKEN pushes do not trigger other workflows by design.
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.GH_RELEASE_TOKEN }}
 
       - name: Compute and push tag
         run: |
@@ -39,8 +40,8 @@ jobs:
             exit 0
           fi
 
-          git config user.name "Forgejo Actions"
-          git config user.email "actions@rolandcode.local"
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
           git tag "$NEXT"
           git push origin "$NEXT"
           echo "Pushed tag: $NEXT"
