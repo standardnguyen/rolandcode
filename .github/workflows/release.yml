@@ -65,6 +65,26 @@ jobs:
         run: |
           TAG=${GITHUB_REF_NAME}
           SHA256=$(cat "$SHA256_FILE")
+          REPO="${{ github.repository }}"
+
+          # Check if release already exists for this tag
+          EXISTING=$(curl -s -o /tmp/existing-release.json -w "%{http_code}" \
+            -H "Authorization: token ${GH_TOKEN}" \
+            "https://api.github.com/repos/${REPO}/releases/tags/${TAG}")
+
+          if [ "$EXISTING" = "200" ]; then
+            ASSET_COUNT=$(python3 -c "import json; print(len(json.load(open('/tmp/existing-release.json')).get('assets', [])))")
+            if [ "$ASSET_COUNT" -ge 2 ]; then
+              echo "Release ${TAG} already exists with ${ASSET_COUNT} assets — skipping"
+              echo "Release URL: https://github.com/${REPO}/releases/tag/${TAG}"
+              exit 0
+            fi
+            echo "Release ${TAG} exists but is incomplete (${ASSET_COUNT} assets) — deleting and recreating"
+            RELEASE_ID=$(python3 -c "import json; print(json.load(open('/tmp/existing-release.json'))['id'])")
+            curl -s -X DELETE \
+              -H "Authorization: token ${GH_TOKEN}" \
+              "https://api.github.com/repos/${REPO}/releases/${RELEASE_ID}"
+          fi
 
           python3 -c "
           import json
@@ -90,10 +110,19 @@ jobs:
           print(json.dumps(payload))
           " > /tmp/release-payload.json
 
-          curl -s -X POST "https://api.github.com/repos/${{ github.repository }}/releases" \
+          curl -s -X POST "https://api.github.com/repos/${REPO}/releases" \
             -H "Authorization: token ${GH_TOKEN}" \
             -H "Content-Type: application/json" \
             -d @/tmp/release-payload.json > /tmp/release-response.json
+
+          # Verify the release was created successfully
+          python3 -c "
+          import json, sys
+          d = json.load(open('/tmp/release-response.json'))
+          if 'upload_url' not in d:
+              print(f'Release creation failed: {json.dumps(d, indent=2)}', file=sys.stderr)
+              sys.exit(1)
+          "
 
           UPLOAD_URL=$(python3 -c "
           import json
@@ -115,7 +144,7 @@ jobs:
           python3 -c "import json; d=json.load(open('/tmp/upload2.json')); print(f'Uploaded: {d[\"name\"]} ({d[\"size\"]} bytes)')"
 
           echo ""
-          echo "Release published: https://github.com/${{ github.repository }}/releases/tag/${TAG}"
+          echo "Release published: https://github.com/${REPO}/releases/tag/${TAG}"
 
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
