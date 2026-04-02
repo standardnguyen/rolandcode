@@ -68,7 +68,10 @@ async function getTerminalBackgroundColor(): Promise<"dark" | "light"> {
     let timeout: NodeJS.Timeout
 
     const cleanup = () => {
-      process.stdin.setRawMode(false)
+      // Note: intentionally not calling setRawMode(false) here.
+      // Toggling raw mode off creates a PTY echo window where late-arriving
+      // OSC responses (from SSH-delayed terminal color queries) get echoed
+      // as visible garbage. The renderer sets raw mode on init anyway.
       process.stdin.removeListener("data", handler)
       clearTimeout(timeout)
     }
@@ -343,24 +346,24 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     if (!terminalTitleEnabled() || Flag.OPENCODE_DISABLE_TERMINAL_TITLE) return
 
     if (route.data.type === "home") {
-      renderer.setTerminalTitle("OpenCode")
+      renderer.setTerminalTitle("RolandCode")
       return
     }
 
     if (route.data.type === "session") {
       const session = sync.session.get(route.data.sessionID)
       if (!session || SessionApi.isDefaultTitle(session.title)) {
-        renderer.setTerminalTitle("OpenCode")
+        renderer.setTerminalTitle("RolandCode")
         return
       }
 
       const title = session.title.length > 40 ? session.title.slice(0, 37) + "..." : session.title
-      renderer.setTerminalTitle(`OC | ${title}`)
+      renderer.setTerminalTitle(`RC | ${title}`)
       return
     }
 
     if (route.data.type === "plugin") {
-      renderer.setTerminalTitle(`OC | ${route.data.id}`)
+      renderer.setTerminalTitle(`RC | ${route.data.id}`)
     }
   })
 
@@ -863,7 +866,7 @@ function App(props: { onSnapshot?: () => Promise<string[]> }) {
     await DialogAlert.show(
       dialog,
       "Update Complete",
-      `Successfully updated to OpenCode v${result.data.version}. Please restart the application.`,
+      `Successfully updated to RolandCode v${result.data.version}. Please restart the application.`,
     )
 
     exit()

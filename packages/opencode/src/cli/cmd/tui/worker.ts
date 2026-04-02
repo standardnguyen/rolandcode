@@ -74,7 +74,11 @@ const startEventStream = (input: { directory: string; workspaceID?: string }) =>
             }
 
             const unsub = Bus.subscribeAll((event) => {
-              Rpc.emit("event", event as Event)
+              const e = event as Event
+              if (e.type?.startsWith("permission.")) {
+                Log.Default.info("worker forwarding permission event", { type: e.type })
+              }
+              Rpc.emit("event", e)
               if (event.type === Bus.InstanceDisposed.type) {
                 settle(true)
               }
@@ -153,6 +157,34 @@ export const rpc = {
   },
   async setWorkspace(input: { workspaceID?: string }) {
     startEventStream({ directory: process.cwd(), workspaceID: input.workspaceID })
+  },
+  async __testPermissionAsk(input: { sessionID: string }) {
+    // Test-only: trigger a permission ask inside the worker's Instance context.
+    const { PermissionNext } = await import("@/permission/next")
+    const { PermissionID } = await import("@/permission/schema")
+    const { SessionID } = await import("@/session/schema")
+    return Instance.provide({
+      directory: process.cwd(),
+      init: InstanceBootstrap,
+      fn: async () => {
+        const id = PermissionID.ascending()
+        const ask = PermissionNext.ask({
+          id,
+          sessionID: SessionID.make(input.sessionID),
+          permission: "bash",
+          patterns: ["ls /tmp"],
+          metadata: { cmd: "ls /tmp" },
+          always: ["ls *"],
+          ruleset: [],
+        })
+        // Auto-reject after a short delay so ask() doesn't hang
+        setTimeout(async () => {
+          await PermissionNext.reply({ requestID: id, reply: "reject" }).catch(() => {})
+        }, 2000)
+        await ask.catch(() => {})
+        return { id: id.toString() }
+      },
+    })
   },
   async shutdown() {
     Log.Default.info("worker shutting down")

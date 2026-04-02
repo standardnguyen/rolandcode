@@ -1733,7 +1733,7 @@ test("provider options are deeply merged", async () => {
   })
 })
 
-test("custom model inherits npm package from models.dev provider config", async () => {
+test("custom model inherits npm package from model catalog provider config", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(
@@ -1769,7 +1769,7 @@ test("custom model inherits npm package from models.dev provider config", async 
   })
 })
 
-test("custom model inherits api.url from models.dev provider", async () => {
+test("custom model inherits api.url from model catalog provider", async () => {
   await using tmp = await tmpdir({
     init: async (dir) => {
       await Bun.write(

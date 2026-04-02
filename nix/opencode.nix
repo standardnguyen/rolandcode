@@ -55,10 +55,10 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   installPhase = ''
     runHook preInstall
 
-    install -Dm755 dist/opencode-*/bin/opencode $out/bin/opencode
-    install -Dm644 schema.json $out/share/opencode/schema.json
+    install -Dm755 dist/opencode-*/bin/rolandcode $out/bin/rolandcode
+    install -Dm644 schema.json $out/share/rolandcode/schema.json
 
-    wrapProgram $out/bin/opencode \
+    wrapProgram $out/bin/rolandcode \
       --prefix PATH : ${
         lib.makeBinPath (
           [

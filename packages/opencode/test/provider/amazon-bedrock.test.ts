@@ -236,7 +236,7 @@ test("Bedrock: autoloads when AWS_WEB_IDENTITY_TOKEN_FILE is present", async () 
 })
 
 // Tests for cross-region inference profile prefix handling
-// Models from models.dev may come with prefixes already (e.g., us., eu., global.)
+// Models from the catalog may come with prefixes already (e.g., us., eu., global.)
 // These should NOT be double-prefixed when passed to the SDK
 
 test("Bedrock: model with us. prefix should not be double-prefixed", async () => {
