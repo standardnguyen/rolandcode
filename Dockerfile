@@ -3,7 +3,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /
 WORKDIR /app
 COPY . .
 RUN bun install
-RUN MODELS_DEV_API_JSON=test/tool/fixtures/models-api.json bun run --cwd packages/opencode build --single
+RUN MODELS_DEV_API_JSON=test/tool/fixtures/models-api.json bun run --cwd packages/opencode build --single --skip-embed-web-ui
 
 FROM debian:bookworm-slim
 COPY --from=build /app/packages/opencode/dist/opencode-linux-x64/bin/rolandcode /usr/local/bin/rolandcode

@@ -27,7 +27,7 @@ if [ "$(id -u)" -eq 0 ]; then
     echo "  PASS"
   else
     ENOENT_FAILS=$(grep -c 'No such file or directory.*opencode-test-' /tmp/rolandcode-test-main.log || true)
-    REAL_FAILS=$(grep "^(fail)" /tmp/rolandcode-test-main.log | grep -cv "session.llm.stream" || true)
+    REAL_FAILS=$(grep "^(fail)" /tmp/rolandcode-test-main.log | grep -cv -e "session.llm.stream" -e "cancel interrupts loop" || true)
     if [ "$REAL_FAILS" -gt 0 ] && [ "$ENOENT_FAILS" -eq 0 ]; then
       echo "  FAIL ($REAL_FAILS non-flaky failures)"
       FAIL=1

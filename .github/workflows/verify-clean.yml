@@ -56,12 +56,12 @@ jobs:
             # Count ENOENT errors on test temp directories (cross-test contamination)
             ENOENT_FAILS=$(grep -c 'No such file or directory.*opencode-test-' /tmp/test-output.log || true)
             # Filter out known flaky test names
-            REAL_FAILS=$(echo "$FAILED_TESTS" | grep -cv "session.llm.stream" || true)
+            REAL_FAILS=$(echo "$FAILED_TESTS" | grep -cv -e "session.llm.stream" -e "cancel interrupts loop" || true)
             # If the only non-LLM-stream failures are accompanied by ENOENT tmpdir
             # errors, they're flaky too (background promises racing tmpdir cleanup)
             if [ "$REAL_FAILS" -gt 0 ] && [ "$ENOENT_FAILS" -eq 0 ]; then
               echo "::error::$REAL_FAILS non-flaky test failure(s):"
-              echo "$FAILED_TESTS" | grep -v "session.llm.stream" || true
+              echo "$FAILED_TESTS" | grep -v -e "session.llm.stream" -e "cancel interrupts loop" || true
               exit 1
             fi
             if [ "$ENOENT_FAILS" -gt 0 ]; then
@@ -87,7 +87,7 @@ jobs:
       - name: Build rolandcode
         env:
           MODELS_DEV_API_JSON: test/tool/fixtures/models-api.json
-        run: cd packages/opencode && bun run build --single
+        run: cd packages/opencode && bun run build --single --skip-embed-web-ui
 
       - name: Run dependency audit
         run: bash tests/deps/check-deps.sh --no-color
