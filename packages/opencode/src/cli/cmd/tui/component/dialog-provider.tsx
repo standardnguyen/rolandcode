@@ -244,7 +244,7 @@ function ApiMethod(props: ApiMethodProps) {
                 key.
               </text>
               <text fg={theme.text}>
-                Go to <span style={{ fg: theme.primary }}>https://opencode.ai/zen</span> to get a key
+                Enter your API key to get started
               </text>
             </box>
           ),
@@ -255,7 +255,7 @@ function ApiMethod(props: ApiMethodProps) {
                 with generous usage limits.
               </text>
               <text fg={theme.text}>
-                Go to <span style={{ fg: theme.primary }}>https://opencode.ai/zen</span> and enable OpenCode Go
+                Enter your API key to enable OpenCode Go
               </text>
             </box>
           ),
