@@ -372,6 +372,9 @@ async function getAccessToken() {
   const envToken = useEnvGithubToken()
   if (envToken) return envToken
 
+  const oidcBaseUrl = process.env["OIDC_BASE_URL"]?.replace(/\/+$/, "")
+  if (!oidcBaseUrl) throw new Error("OIDC_BASE_URL environment variable is required")
+
   let response
   if (isMock()) {
     const baseUrl = process.env["OIDC_BASE_URL"]?.replace(/\/+$/, "")
