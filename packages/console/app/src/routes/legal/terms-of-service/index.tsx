@@ -265,7 +265,7 @@ export default function TermsOfService() {
               <p>
                 Certain of our Services, including Zen, may be subject to payments now or in the future (the "Paid
                 Services"). Please see our Paid Services page{" "}
-                <a href={language.route("/zen")}>https://opencode.ai/zen</a> for a description of the current Paid
+                <a href={language.route("/zen")}>{language.route("/zen")}</a> for a description of the current Paid
                 Services. Please note that any payment terms presented to you in the process of using or signing up for
                 a Paid Service are deemed part of these Terms.
               </p>

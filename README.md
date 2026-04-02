@@ -1,141 +1,145 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">The open source AI coding agent.</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
+# Rolandcode
 
-<p align="center">
-  <a href="README.md">English</a> |
-  <a href="README.zh.md">简体中文</a> |
-  <a href="README.zht.md">繁體中文</a> |
-  <a href="README.ko.md">한국어</a> |
-  <a href="README.de.md">Deutsch</a> |
-  <a href="README.es.md">Español</a> |
-  <a href="README.fr.md">Français</a> |
-  <a href="README.it.md">Italiano</a> |
-  <a href="README.da.md">Dansk</a> |
-  <a href="README.ja.md">日本語</a> |
-  <a href="README.pl.md">Polski</a> |
-  <a href="README.ru.md">Русский</a> |
-  <a href="README.bs.md">Bosanski</a> |
-  <a href="README.ar.md">العربية</a> |
-  <a href="README.no.md">Norsk</a> |
-  <a href="README.br.md">Português (Brasil)</a> |
-  <a href="README.th.md">ไทย</a> |
-  <a href="README.tr.md">Türkçe</a> |
-  <a href="README.uk.md">Українська</a> |
-  <a href="README.bn.md">বাংলা</a> |
-  <a href="README.gr.md">Ελληνικά</a> |
-  <a href="README.vi.md">Tiếng Việt</a>
-</p>
+A clean fork of [OpenCode](https://github.com/anomalyco/opencode) with all telemetry and phone-home behavior removed.
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+OpenCode markets itself as "privacy-first" and "open source," but silently transmits data to multiple third-party services — analytics (PostHog), telemetry (Honeycomb), session sharing (opncd.ai), prompt proxying (opencode.ai/zen), search query forwarding (mcp.exa.ai), and IP-leaking model list fetches (models.dev). The maintainers initially denied telemetry existed ([#459](https://github.com/sst/opencode/issues/459)), then acknowledged it. Users report that disabling telemetry in config doesn't fully stop outbound connections ([#5554](https://github.com/sst/opencode/issues/5554)).
+
+Rolandcode doesn't try to convince OpenCode to change. It just strips their telemetry and ships clean builds.
+
+The name is from Browning's *Childe Roland to the Dark Tower Came* — Roland reaches the tower despite everything trying to stop him.
 
 ---
 
-### Installation
+## What's removed
+
+| Endpoint | What it sent |
+|----------|-------------|
+| `us.i.posthog.com` | Usage analytics |
+| `api.honeycomb.io` | Telemetry, IP address, location |
+| `api.opencode.ai` | Session content, prompts |
+| `opncd.ai` | Session sharing data |
+| `opencode.ai/zen/v1` | Prompts proxied through OpenCode's gateway |
+| `mcp.exa.ai` | Search queries |
+| `models.dev` | Model list fetches (leaks IP) |
+| `app.opencode.ai` | Catch-all app proxy |
+
+The model catalog is vendored at build time from a local snapshot — no runtime phone-home.
+
+## Installation
+
+Download a binary from the [releases page](https://github.com/standardnguyen/rolandcode/releases), or run with Docker:
 
 ```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
-
-# Package managers
-npm i -g opencode-ai@latest        # or bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS and Linux (recommended, always up to date)
-brew install opencode              # macOS and Linux (official brew formula, updated less)
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # Any OS
-nix run nixpkgs#opencode           # or github:anomalyco/opencode for latest dev branch
+docker run --rm -it -v "$PWD:/workspace" -w /workspace ghcr.io/standardnguyen/rolandcode
 ```
 
-> [!TIP]
-> Remove versions older than 0.1.x before installing.
-
-### Desktop App (BETA)
-
-OpenCode is also available as a desktop application. Download directly from the [releases page](https://github.com/anomalyco/opencode/releases) or [opencode.ai/download](https://opencode.ai/download).
-
-| Platform              | Download                              |
-| --------------------- | ------------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-darwin-aarch64.dmg` |
-| macOS (Intel)         | `opencode-desktop-darwin-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe`    |
-| Linux                 | `.deb`, `.rpm`, or AppImage           |
+### Building from source
 
 ```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+git clone https://github.com/standardnguyen/rolandcode.git
+cd rolandcode
+bun install
+
+# Download a model catalog snapshot
+curl -fsSL -o models-api.json https://models.dev/api.json
+
+# Build
+MODELS_DEV_API_JSON=$PWD/models-api.json bun run --cwd packages/opencode build --single
 ```
 
-#### Installation Directory
+The binary is at `packages/opencode/dist/opencode-linux-x64/bin/rolandcode` (or the equivalent for your platform).
 
-The install script respects the following priority order for the installation path:
+### Building from a fresh Debian container
 
-1. `$OPENCODE_INSTALL_DIR` - Custom installation directory
-2. `$XDG_BIN_DIR` - XDG Base Directory Specification compliant path
-3. `$HOME/bin` - Standard user binary directory (if it exists or can be created)
-4. `$HOME/.opencode/bin` - Default fallback
+If you're starting from a bare Debian 12 install (container, VM, or cloud instance):
 
 ```bash
-# Examples
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+# Prerequisites
+apt-get update && apt-get install -y git curl unzip
+
+# Install Bun
+curl -fsSL https://bun.sh/install | bash
+source ~/.bashrc
+
+# Build from source
+git clone https://github.com/standardnguyen/rolandcode.git
+cd rolandcode
+bun install
+curl -fsSL -o models-api.json https://models.dev/api.json
+MODELS_DEV_API_JSON=$PWD/models-api.json bun run --cwd packages/opencode build --single
+
+# Verify it's clean
+bash scripts/verify-clean.sh
+
+# Run it
+./packages/opencode/dist/opencode-linux-x64/bin/rolandcode
 ```
 
-### Agents
+Or build with Docker (no Bun required):
 
-OpenCode includes two built-in agents you can switch between with the `Tab` key.
+```bash
+git clone https://github.com/standardnguyen/rolandcode.git
+cd rolandcode
+docker build -t rolandcode .
+docker run --rm -it -v "$PWD:/workspace" -w /workspace rolandcode
+```
 
-- **build** - Default, full-access agent for development work
-- **plan** - Read-only agent for analysis and code exploration
-  - Denies file edits by default
-  - Asks permission before running bash commands
-  - Ideal for exploring unfamiliar codebases or planning changes
+## Verification
 
-Also included is a **general** subagent for complex searches and multistep tasks.
-This is used internally and can be invoked using `@general` in messages.
+Every build can be verified clean:
 
-Learn more about [agents](https://opencode.ai/docs/agents).
+```bash
+bash scripts/verify-clean.sh
+```
 
-### Documentation
+This greps the entire source tree for all known telemetry domains and SDK packages. If any reference remains, the build fails. Grep doesn't lie.
 
-For more info on how to configure OpenCode, [**head over to our docs**](https://opencode.ai/docs).
+## How it works
 
-### Contributing
+Rolandcode maintains a small patch set on top of upstream OpenCode. Each strip commit removes one telemetry concern:
 
-If you're interested in contributing to OpenCode, please read our [contributing docs](./CONTRIBUTING.md) before submitting a pull request.
+- `strip-posthog` — PostHog analytics
+- `strip-honeycomb` — Honeycomb telemetry
+- `strip-exa` — mcp.exa.ai search forwarding
+- `strip-opencode-api` — api.opencode.ai and opncd.ai endpoints
+- `strip-zen-gateway` — Zen proxy routing
+- `strip-app-proxy` — app.opencode.ai catch-all proxy
+- `strip-share-sync` — Automatic session sharing
+- `strip-models-dev` — Runtime model list fetching
 
-### Building on OpenCode
+Small, isolated commits rebase cleanly when upstream moves.
 
-If you are working on a project that's related to OpenCode and is using "opencode" as part of its name, for example "opencode-dashboard" or "opencode-mobile", please add a note to your README to clarify that it is not built by the OpenCode team and is not affiliated with us in any way.
+## Testing
 
-### FAQ
+```bash
+# Full suite (runs permission tests in Docker when running as root)
+bash scripts/test.sh
 
-#### How is this different from Claude Code?
+# Just the main suite
+cd packages/opencode && bun test --timeout 30000
 
-It's very similar to Claude Code in terms of capability. Here are the key differences:
+# Just the permission tests (must be non-root, or use Docker)
+docker run --rm -v $(pwd):/app:ro -w /app/packages/opencode -u 1000:1000 --tmpfs /tmp:exec oven/bun:1.3.10 \
+  bun test test/tool/write.test.ts test/config/tui.test.ts --timeout 30000
+```
 
-- 100% open source
-- Not coupled to any provider. Although we recommend the models we provide through [OpenCode Zen](https://opencode.ai/zen), OpenCode can be used with Claude, OpenAI, Google, or even local models. As models evolve, the gaps between them will close and pricing will drop, so being provider-agnostic is important.
-- Out-of-the-box LSP support
-- A focus on TUI. OpenCode is built by neovim users and the creators of [terminal.shop](https://terminal.shop); we are going to push the limits of what's possible in the terminal.
-- A client/server architecture. This, for example, can allow OpenCode to run on your computer while you drive it remotely from a mobile app, meaning that the TUI frontend is just one of the possible clients.
+### Known test issues
 
----
+| Test | Status | Why |
+|------|--------|-----|
+| `session.llm.stream` (2 of 10) | Flaky | Mock HTTP server state leaks between parallel tests. Passes 10/10 when run in isolation (`bun test test/session/llm.test.ts`). Upstream test isolation bug — not a code defect. |
+| `tool.write > throws error when OS denies write access` | Fails as root | Root bypasses `chmod 0o444`. Passes in Docker as non-root. `scripts/test.sh` handles this automatically. |
+| `tui config > continues loading when legacy source cannot be stripped` | Fails as root | Same root-vs-chmod issue. Passes in Docker as non-root. |
+| `fsmonitor` (2 tests) | Skipped | Windows-only (`process.platform === "win32"`). |
+| `worktree-remove` (1 test) | Skipped | Windows-only. |
+| `unicode filenames modification and restore` | Skipped | Upstream explicitly skipped — known bug they haven't fixed. |
 
-**Join our community** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+## Upstream
+
+This is a fork of [anomalyco/opencode](https://github.com/anomalyco/opencode) (MIT license). All original code is theirs. The full upstream commit history is preserved — you can see exactly what was changed and why.
+
+OpenCode is a capable AI coding agent with a great TUI, LSP support, and multi-provider flexibility. We use it because it's good software. We strip the telemetry because the privacy claims don't match the behavior.
+
+## License
+
+MIT — same as upstream. See [LICENSE](LICENSE).

@@ -102,7 +102,7 @@ export default function Home() {
             </li>
             <li>
               <strong>{i18n.t("home.what.anyModel.title")}</strong> {i18n.t("temp.feature.models.beforeLink")}{" "}
-              <a href="https://models.dev">Models.dev</a>
+              the model catalog
               {i18n.t("temp.feature.models.afterLink")}
             </li>
           </ul>
