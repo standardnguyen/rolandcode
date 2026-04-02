@@ -95,7 +95,7 @@ export namespace ModelsDev {
   }
 
   export async function refresh() {
-    // Stripped: no remote fetch from models.dev
+    // Stripped: no remote model catalog fetch
     ModelsDev.Data.reset()
   }
 }

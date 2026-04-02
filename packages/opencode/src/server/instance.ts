@@ -1,6 +1,5 @@
 import { describeRoute, resolver } from "hono-openapi"
 import { Hono } from "hono"
-import { proxy } from "hono/proxy"
 import z from "zod"
 import { createHash } from "node:crypto"
 import { Log } from "../util/log"
@@ -266,20 +265,6 @@ export const InstanceRoutes = (app?: Hono) =>
           return c.json({ error: "Not Found" }, 404)
         }
       } else {
-        const response = await proxy(`https://app.opencode.ai${path}`, {
-          ...c.req,
-          headers: {
-            ...c.req.raw.headers,
-            host: "app.opencode.ai",
-          },
-        })
-        const match = response.headers.get("content-type")?.includes("text/html")
-          ? (await response.clone().text()).match(
-              /<script\b(?![^>]*\bsrc\s*=)[^>]*\bid=(['"])oc-theme-preload-script\1[^>]*>([\s\S]*?)<\/script>/i,
-            )
-          : undefined
-        const hash = match ? createHash("sha256").update(match[2]).digest("base64") : ""
-        response.headers.set("Content-Security-Policy", csp(hash))
-        return response
+        return c.json({ error: "not found" }, 404)
       }
     })
