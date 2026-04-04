@@ -1,18 +1,4 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">OpenCode je open source AI agent za programiranje.</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
+# Rolandcode
 
 <p align="center">
   <a href="README.md">English</a> |
@@ -39,103 +25,104 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+Čist fork projekta [OpenCode](https://github.com/anomalyco/opencode) s uklonjenim ponašanjem telemetrije i "phone-home".
+
+OpenCode se predstavlja kao "privatnost na prvom mjestu" i "otvoreni kod", ali tiho prenosi podatke na više usluga trećih strana — analitika (PostHog), telemetrija (Honeycomb), dijeljenje sesija (opncd.ai), proksiranje promptova (opencode.ai/zen), preusmjeravanje pretraživanja (mcp.exa.ai), i preuzimanje liste modela koje izlažu IP (models.dev). Održavatelji su prvotno negirali postojanje telemetrije ([#459](https://github.com/sst/opencode/issues/459)), a zatim su je priznali. Korisnici izvještavaju da onemogućavanje telemetrije u konfiguraciji ne zaustavlja potpuno izlazne veze ([#5554](https://github.com/sst/opencode/issues/5554)).
+
+Rolandcode se ne trudi uvjeriti OpenCode da se promijeni. Jednostavno uklanja njihovu telemetriju i dostavlja čiste buildove.
+
+Ime je iz Browningovog djela *Childe Roland to the Dark Tower Came* — Roland dolazi do tornja uprkos svemu što pokušava zaustaviti ga.
 
 ---
 
-### Instalacija
+## Šta je uklonjeno
+
+| Endpoint | Šta je slao |
+|----------|-------------|
+| `us.i.posthog.com` | Analitika korištenja |
+| `api.honeycomb.io` | Telemetrija, IP adresa, lokacija |
+| `api.opencode.ai` | Sadržaj sesije, promptovi |
+| `opncd.ai` | Podaci za dijeljenje sesija |
+| `opencode.ai/zen/v1` | Promptovi proksirani kroz OpenCode-ov gateway |
+| `mcp.exa.ai` | Upiti za pretraživanje |
+| `models.dev` | Preuzimanje liste modela (izlaže IP) |
+| `app.opencode.ai` | Proxy za svaku aplikaciju (catch-all) |
+
+Katalog modela se uključuje u build u vrijeme izgradnje iz lokalnog snapshota — nema phone-home tijekom izvršavanja.
+
+## Instalacija
+
+Preuzmi binarnu datoteku sa [stranice izdanja](https://github.com/TODO/rolandcode/releases), ili sastavi iz izvora:
 
 ```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
+git clone https://github.com/TODO/rolandcode.git
+cd rolandcode/packages/opencode
 
-# Package manageri
-npm i -g opencode-ai@latest        # ili bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS i Linux (preporučeno, uvijek ažurno)
-brew install opencode              # macOS i Linux (zvanična brew formula, rjeđe se ažurira)
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # Bilo koji OS
-nix run nixpkgs#opencode           # ili github:anomalyco/opencode za najnoviji dev branch
+# Download a model catalog snapshot
+curl -fsSL -o models-api.json https://models.dev/api.json
+
+# Build
+MODELS_DEV_API_JSON=./models-api.json bun run build --single
 ```
 
-> [!TIP]
-> Ukloni verzije starije od 0.1.x prije instalacije.
+Binarna datoteka je na `dist/opencode-linux-x64/bin/rolandcode` (ili ekvivalent za vašu platformu).
 
-### Desktop aplikacija (BETA)
+## Verifikacija
 
-OpenCode je dostupan i kao desktop aplikacija. Preuzmi je direktno sa [stranice izdanja](https://github.com/anomalyco/opencode/releases) ili sa [opencode.ai/download](https://opencode.ai/download).
-
-| Platforma             | Preuzimanje                           |
-| --------------------- | ------------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-darwin-aarch64.dmg` |
-| macOS (Intel)         | `opencode-desktop-darwin-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe`    |
-| Linux                 | `.deb`, `.rpm`, ili AppImage          |
+Svaki build se može provjeriti kao čist:
 
 ```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+bash scripts/verify-clean.sh
 ```
 
-#### Instalacijski direktorij
+Ovo grepa cijelo stablo izvora za sve poznate domene telemetrije i pakete SDK-a. Ako ostane bilo kakva referenca, build neuspjeva. Grep ne laže.
 
-Instalacijska skripta koristi sljedeći redoslijed prioriteta za putanju instalacije:
+## Kako radi
 
-1. `$OPENCODE_INSTALL_DIR` - Prilagođeni instalacijski direktorij
-2. `$XDG_BIN_DIR` - Putanja usklađena sa XDG Base Directory specifikacijom
-3. `$HOME/bin` - Standardni korisnički bin direktorij (ako postoji ili se može kreirati)
-4. `$HOME/.opencode/bin` - Podrazumijevana rezervna lokacija
+Rolandcode održava mali skup patcheva preko originalnog OpenCode-a. Svaki commit za uklanjanje uklanja jednu zabrinutost vezanu za telemetriju:
+
+- `strip-posthog` — PostHog analitika
+- `strip-honeycomb` — Honeycomb telemetrija
+- `strip-exa` — Preusmjeravanje pretraživanja mcp.exa.ai
+- `strip-opencode-api` — Endpointi api.opencode.ai i opncd.ai
+- `strip-zen-gateway` — Usmeravanje Zen proxyja
+- `strip-app-proxy` — Catch-all proxy app.opencode.ai
+- `strip-share-sync` — Automatsko dijeljenje sesija
+- `strip-models-dev` — Preuzimanje liste modela tijekom izvršavanja
+
+Mali, izolirani commitovi se čisto rebaseuju kada se upstream pomjeri.
+
+## Testiranje
 
 ```bash
-# Primjeri
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+# Full suite (runs permission tests in Docker when running as root)
+bash scripts/test.sh
+
+# Just the main suite
+cd packages/opencode && bun test --timeout 30000
+
+# Just the permission tests (must be non-root, or use Docker)
+docker run --rm -v $(pwd):/app:ro -w /app/packages/opencode -u 1000:1000 --tmpfs /tmp:exec oven/bun:1.3.10 \
+  bun test test/tool/write.test.ts test/config/tui.test.ts --timeout 30000
 ```
 
-### Agenti
+### Poznati problemi s testovima
 
-OpenCode uključuje dva ugrađena agenta između kojih možeš prebacivati tasterom `Tab`.
+| Test | Status | Zašto |
+|------|--------|-------|
+| `session.llm.stream` (2 od 10) | Nestabilan | Stanje mock HTTP servera curi između paralelnih testova. Prođe 10/10 kada se pokrene izolirano (`bun test test/session/llm.test.ts`). Bug izolacije testova upstream-a — ne je greška u kodu. |
+| `tool.write > throws error when OS denies write access` | Neuspjeva kao root | Root zaobilazi `chmod 0o444`. Prođe u Dockeru kao non-root. `scripts/test.sh` ovo automatski obrađuje. |
+| `tui config > continues loading when legacy source cannot be stripped` | Neuspjeva kao root | Ista root-vs-chmod situacija. Prođe u Dockeru kao non-root. |
+| `fsmonitor` (2 testa) | Preskočeno | Samo za Windows (`process.platform === "win32"`). |
+| `worktree-remove` (1 test) | Preskočeno | Samo za Windows. |
+| `unicode filenames modification and restore` | Preskočeno | Upstream eksplicitno preskočeno — poznati bug koji nisu popravili. |
 
-- **build** - Podrazumijevani agent sa punim pristupom za razvoj
-- **plan** - Agent samo za čitanje za analizu i istraživanje koda
-  - Podrazumijevano zabranjuje izmjene datoteka
-  - Traži dozvolu prije pokretanja bash komandi
-  - Idealan za istraživanje nepoznatih codebase-ova ili planiranje izmjena
+## Upstream
 
-Uključen je i **general** pod-agent za složene pretrage i višekoračne zadatke.
-Koristi se interno i može se pozvati pomoću `@general` u porukama.
+Ovo je fork projekta [anomalyco/opencode](https://github.com/anomalyco/opencode) (MIT licenca). Svi originalni kodovi su njihovi. Cijela povijest commitova upstream-a je sačuvana — možete vidjeti tačno šta je promijenjeno i zašto.
 
-Saznaj više o [agentima](https://opencode.ai/docs/agents).
+OpenCode je sposoban AI agent za kodiranje s odličnim TUI-om, podrškom LSP i fleksibilnošću više provajdera. Koristimo ga jer je dobar softver. Uklanjamo telemetriju jer tvrdnje o privatnosti ne odgovaraju ponašanju.
 
-### Dokumentacija
+## Licenca
 
-Za više informacija o konfiguraciji OpenCode-a, [**pogledaj dokumentaciju**](https://opencode.ai/docs).
-
-### Doprinosi
-
-Ako želiš doprinositi OpenCode-u, pročitaj [upute za doprinošenje](./CONTRIBUTING.md) prije slanja pull requesta.
-
-### Gradnja na OpenCode-u
-
-Ako radiš na projektu koji je povezan s OpenCode-om i koristi "opencode" kao dio naziva, npr. "opencode-dashboard" ili "opencode-mobile", dodaj napomenu u svoj README da projekat nije napravio OpenCode tim i da nije povezan s nama.
-
-### FAQ
-
-#### Po čemu se razlikuje od Claude Code-a?
-
-Po mogućnostima je vrlo sličan Claude Code-u. Ključne razlike su:
-
-- 100% open source
-- Nije vezan za jednog provajdera. Iako preporučujemo modele koje nudimo kroz [OpenCode Zen](https://opencode.ai/zen), OpenCode možeš koristiti s Claude, OpenAI, Google ili čak lokalnim modelima. Kako modeli napreduju, razlike među njima će se smanjivati, a cijene padati, zato je nezavisnost od provajdera važna.
-- LSP podrška odmah po instalaciji
-- Fokus na TUI. OpenCode grade neovim korisnici i kreatori [terminal.shop](https://terminal.shop); pomjeraćemo granice onoga što je moguće u terminalu.
-- Klijent/server arhitektura. To, recimo, omogućava da OpenCode radi na tvom računaru dok ga daljinski koristiš iz mobilne aplikacije, što znači da je TUI frontend samo jedan od mogućih klijenata.
-
----
-
-**Pridruži se našoj zajednici** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+MIT — isto kao upstream. Pogledajte [LICENSE](LICENSE).

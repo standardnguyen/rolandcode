@@ -1,18 +1,4 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="Logo OpenCode">
-    </picture>
-  </a>
-</p>
-<p align="center">L’agente di coding AI open source.</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
+# Rolandcode
 
 <p align="center">
   <a href="README.md">English</a> |
@@ -39,103 +25,104 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+Un fork pulito di [OpenCode](https://github.com/anomalyco/opencode) con tutta la telemetria e il comportamento di comunicazione con il server centrale rimossi.
+
+OpenCode si pubblicizza come "focalizzato sulla privacy" e "open source", ma trasmette silenziosamente dati a vari servizi di terze parti: analisi (PostHog), telemetria (Honeycomb), condivisione sessioni (opncd.ai), proxy per i prompt (opencode.ai/zen), inoltramento delle query di ricerca (mcp.exa.ai) e recupero delle liste dei modelli che泄露 l'IP (models.dev). I maintainers hanno inizialmente negato l'esistenza della telemetria ([#459](https://github.com/sst/opencode/issues/459)), per poi riconoscerla. Gli utenti riportano che disabilitare la telemetria nella configurazione non ferma completamente le connessioni in uscita ([#5554](https://github.com/sst/opencode/issues/5554)).
+
+Rolandcode non cerca di convincere OpenCode a cambiare. Rimuove semplicemente la loro telemetria e distribuisce build pulite.
+
+Il nome deriva da *Childe Roland alla Torre Oscura* di Browning — Roland raggiunge la torre nonostante tutto ciò che cerca di fermarlo.
 
 ---
 
-### Installazione
+## Cosa è stato rimosso
+
+| Endpoint | Cosa inviava |
+|----------|-------------|
+| `us.i.posthog.com` | Analisi di utilizzo |
+| `api.honeycomb.io` | Telemetria, indirizzo IP, posizione |
+| `api.opencode.ai` | Contenuto sessione, prompt |
+| `opncd.ai` | Dati di condivisione sessione |
+| `opencode.ai/zen/v1` | Prompt inoltrati tramite il gateway di OpenCode |
+| `mcp.exa.ai` | Query di ricerca |
+| `models.dev` | Recupero lista modelli (泄露 IP) |
+| `app.opencode.ai` | Proxy app generico |
+
+Il catalogo dei modelli è incluso al momento della build da uno snapshot locale — nessuna comunicazione con il server centrale in tempo di esecuzione.
+
+## Installazione
+
+Scarica un binario dalla [pagina delle release](https://github.com/TODO/rolandcode/releases), oppure compila dal sorgente:
 
 ```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
+git clone https://github.com/TODO/rolandcode.git
+cd rolandcode/packages/opencode
 
-# Package manager
-npm i -g opencode-ai@latest        # oppure bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS e Linux (consigliato, sempre aggiornato)
-brew install opencode              # macOS e Linux (formula brew ufficiale, aggiornata meno spesso)
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # Qualsiasi OS
-nix run nixpkgs#opencode           # oppure github:anomalyco/opencode per l’ultima branch di sviluppo
+# Scarica uno snapshot del catalogo modelli
+curl -fsSL -o models-api.json https://models.dev/api.json
+
+# Compila
+MODELS_DEV_API_JSON=./models-api.json bun run build --single
 ```
 
-> [!TIP]
-> Rimuovi le versioni precedenti alla 0.1.x prima di installare.
+Il binario si trova in `dist/opencode-linux-x64/bin/rolandcode` (o l'equivalente per la tua piattaforma).
 
-### App Desktop (BETA)
+## Verifica
 
-OpenCode è disponibile anche come applicazione desktop. Puoi scaricarla direttamente dalla [pagina delle release](https://github.com/anomalyco/opencode/releases) oppure da [opencode.ai/download](https://opencode.ai/download).
-
-| Piattaforma           | Download                              |
-| --------------------- | ------------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-darwin-aarch64.dmg` |
-| macOS (Intel)         | `opencode-desktop-darwin-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe`    |
-| Linux                 | `.deb`, `.rpm`, oppure AppImage       |
+Ogni build può essere verificata come pulita:
 
 ```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+bash scripts/verify-clean.sh
 ```
 
-#### Directory di installazione
+Questo esegue un grep su tutto l'albero dei sorgenti per tutti i domini di telemetria noti e i pacchetti SDK. Se rimane un riferimento, la build fallisce. Grep non mente.
 
-Lo script di installazione rispetta il seguente ordine di priorità per il percorso di installazione:
+## Come funziona
 
-1. `$OPENCODE_INSTALL_DIR` – Directory di installazione personalizzata
-2. `$XDG_BIN_DIR` – Percorso conforme alla XDG Base Directory Specification
-3. `$HOME/bin` – Directory binaria standard dell’utente (se esiste o può essere creata)
-4. `$HOME/.opencode/bin` – Fallback predefinito
+Rolandcode mantiene un piccolo insieme di patch sopra l'upstream OpenCode. Ogni commit di rimozione elimina un aspetto della telemetria:
+
+- `strip-posthog` — Analisi PostHog
+- `strip-honeycomb` — Telemetria Honeycomb
+- `strip-exa` — Inoltramento ricerca mcp.exa.ai
+- `strip-opencode-api` — Endpoint api.opencode.ai e opncd.ai
+- `strip-zen-gateway` — Instradamento proxy Zen
+- `strip-app-proxy` — Proxy generico app.opencode.ai
+- `strip-share-sync` — Condivisione automatica sessioni
+- `strip-models-dev` — Recupero lista modelli in tempo di esecuzione
+
+Commit piccoli e isolati si rebaseano pulitamente quando l'upstream si aggiorna.
+
+## Test
 
 ```bash
-# Esempi
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+# Suite completa (esegue test di permessi in Docker quando si esegue come root)
+bash scripts/test.sh
+
+# Solo la suite principale
+cd packages/opencode && bun test --timeout 30000
+
+# Solo i test di permessi (deve essere non-root, oppure usare Docker)
+docker run --rm -v $(pwd):/app:ro -w /app/packages/opencode -u 1000:1000 --tmpfs /tmp:exec oven/bun:1.3.10 \
+  bun test test/tool/write.test.ts test/config/tui.test.ts --timeout 30000
 ```
 
-### Agenti
+### Problemi noti nei test
 
-OpenCode include due agenti integrati tra cui puoi passare usando il tasto `Tab`.
+| Test | Stato | Motivo |
+|------|--------|-----|
+| `session.llm.stream` (2 su 10) | Instabile | Perdita di stato del server HTTP simulato tra test paralleli. Passa 10/10 se eseguito in isolamento (`bun test test/session/llm.test.ts`). Bug di isolamento dei test upstream — non un difetto di codice. |
+| `tool.write > genera errore quando il sistema operativo nega l'accesso in scrittura` | Fallisce come root | Root bypassa `chmod 0o444`. Passa in Docker come non-root. `scripts/test.sh` gestisce questo automaticamente. |
+| `tui config > continua il caricamento quando la sorgente legacy non può essere rimossa` | Fallisce come root | Stesso problema root-vs-chmod. Passa in Docker come non-root. |
+| `fsmonitor` (2 test) | Saltato | Solo per Windows (`process.platform === "win32"`). |
+| `worktree-remove` (1 test) | Saltato | Solo per Windows. |
+| `unicode filenames modification and restore` | Saltato | Esplicitamente saltato dall'upstream — bug noto che non hanno corretto. |
 
-- **build** – Predefinito, agente con accesso completo per il lavoro di sviluppo
-- **plan** – Agente in sola lettura per analisi ed esplorazione del codice
-  - Nega le modifiche ai file per impostazione predefinita
-  - Chiede il permesso prima di eseguire comandi bash
-  - Ideale per esplorare codebase sconosciute o pianificare modifiche
+## Progetto Originale
 
-È inoltre incluso un sotto-agente **general** per ricerche complesse e attività multi-step.
-Viene utilizzato internamente e può essere invocato usando `@general` nei messaggi.
+Questo è un fork di [anomalyco/opencode](https://github.com/anomalyco/opencode) (licenza MIT). Tutto il codice originale è loro. L'intera cronologia dei commit upstream è conservata — puoi vedere esattamente cosa è stato modificato e perché.
 
-Scopri di più sugli [agenti](https://opencode.ai/docs/agents).
+OpenCode è un agente di coding AI capace con un'ottima interfaccia testuale, supporto LSP e flessibilità multi-provider. Lo usiamo perché è un buon software. Rimuoviamo la telemetria perché le affermazioni sulla privacy non corrispondono al comportamento.
 
-### Documentazione
+## Licenza
 
-Per maggiori informazioni su come configurare OpenCode, [**consulta la nostra documentazione**](https://opencode.ai/docs).
-
-### Contribuire
-
-Se sei interessato a contribuire a OpenCode, leggi la nostra [guida alla contribuzione](./CONTRIBUTING.md) prima di inviare una pull request.
-
-### Costruire su OpenCode
-
-Se stai lavorando a un progetto correlato a OpenCode e che utilizza “opencode” come parte del nome (ad esempio “opencode-dashboard” o “opencode-mobile”), aggiungi una nota nel tuo README per chiarire che non è sviluppato dal team OpenCode e che non è affiliato in alcun modo con noi.
-
-### FAQ
-
-#### In cosa è diverso da Claude Code?
-
-È molto simile a Claude Code in termini di funzionalità. Ecco le principali differenze:
-
-- 100% open source
-- Non è legato a nessun provider. Anche se consigliamo i modelli forniti tramite [OpenCode Zen](https://opencode.ai/zen), OpenCode può essere utilizzato con Claude, OpenAI, Google o persino modelli locali. Con l’evoluzione dei modelli, le differenze tra di essi si ridurranno e i prezzi scenderanno, quindi essere indipendenti dal provider è importante.
-- Supporto LSP pronto all’uso
-- Forte attenzione alla TUI. OpenCode è sviluppato da utenti neovim e dai creatori di [terminal.shop](https://terminal.shop); spingeremo al limite ciò che è possibile fare nel terminale.
-- Architettura client/server. Questo, ad esempio, permette a OpenCode di girare sul tuo computer mentre lo controlli da remoto tramite un’app mobile. La frontend TUI è quindi solo uno dei possibili client.
-
----
-
-**Unisciti alla nostra community** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+MIT — stessa dell'upstream. Vedi [LICENSE](LICENSE).

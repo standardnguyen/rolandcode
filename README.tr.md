@@ -1,18 +1,4 @@
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">Açık kaynaklı yapay zeka kodlama asistanı.</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
+# Rolandcode
 
 <p align="center">
   <a href="README.md">English</a> |
@@ -39,103 +25,102 @@
   <a href="README.vi.md">Tiếng Việt</a>
 </p>
 
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
+Tüm telemetri ve uzaktan bağlantı ("phone-home") davranışları kaldırılmış, [OpenCode](https://github.com/anomalyco/opencode) projesinin temiz bir çatalı (fork) (fork).
 
----
+OpenCode kendini "önce gizlilik" ve "açık kaynak" olarak pazarlıyor, ancak sessizce çok sayıda üçüncü taraf servise veri gönderiyor — analitik (PostHog), telemetri (Honeycomb), oturum paylaşımı (opncd.ai), istek (prompt) yönlendirme (opencode.ai/zen), arama sorgusu yönlendirme (mcp.exa.ai) ve IP sızdırma riski taşıyan model listesi çekimleri (models.dev). Bakım görevlileri ilk olarak telemetrinin varlığını inkar ettiler ([#459](https://github.com/sst/opencode/issues/459)), ardından kabul ettiler. Kullanıcılar, yapılandırma dosyasında telemetriyi devre dışı bırakmanın giden bağlantıları tamamen durdurmadığını raporluyor ([#5554](https://github.com/sst/opencode/issues/5554)).
 
-### Kurulum
+Rolandcode, OpenCode'yi değiştirmeye ikna etmeye çalışmaz. Sadece onların telemetrilerini kaldırır ve temiz derlemeler (builds) sunar.
 
-```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
+İsim, Browning'in *Childe Roland to the Dark Tower Came* eserinden geliyor — Roland, onu durdurmaya çalışan her şeye rağmen kuleye ulaşır.
 
-# Paket yöneticileri
-npm i -g opencode-ai@latest        # veya bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS ve Linux (önerilir, her zaman güncel)
-brew install opencode              # macOS ve Linux (resmi brew formülü, daha az güncellenir)
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # Tüm işletim sistemleri
-nix run nixpkgs#opencode           # veya en güncel geliştirme dalı için github:anomalyco/opencode
-```
+## Ne Kaldırıldı
 
-> [!TIP]
-> Kurulumdan önce 0.1.x'ten eski sürümleri kaldırın.
+| Endpoint | Ne Gönderdi |
+|----------|-------------|
+| `us.i.posthog.com` | Kullanım analitiği |
+| `api.honeycomb.io` | Telemetri, IP adresi, konum |
+| `api.opencode.ai` | Oturum içeriği, istekler (prompts) |
+| `opncd.ai` | Oturum paylaşımı verisi |
+| `opencode.ai/zen/v1` | OpenCode'nin kapısı üzerinden yönlendirilen istekler |
+| `mcp.exa.ai` | Arama sorguları |
+| `models.dev` | Model listesi çekimleri (IP sızdırır) |
+| `app.opencode.ai` | Kapsamlı uygulama (catch-all) proxy |
 
-### Masaüstü Uygulaması (BETA)
+Model kataloğu, derleme zamanında yerel bir anlık görüntüden temin edilir — çalışma zamanında uzaktan bağlantı (phone-home) yok.
 
-OpenCode ayrıca masaüstü uygulaması olarak da mevcuttur. Doğrudan [sürüm sayfasından](https://github.com/anomalyco/opencode/releases) veya [opencode.ai/download](https://opencode.ai/download) adresinden indirebilirsiniz.
+## Kurulum
 
-| Platform              | İndirme                               |
-| --------------------- | ------------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-darwin-aarch64.dmg` |
-| macOS (Intel)         | `opencode-desktop-darwin-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe`    |
-| Linux                 | `.deb`, `.rpm` veya AppImage          |
+[Sürümler sayfasından](https://github.com/TODO/rolandcode/releases) bir yürütülebilir dosya (binary) indirin veya kaynaktan derleyin:
 
 ```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+git clone https://github.com/TODO/rolandcode.git
+cd rolandcode/packages/opencode
+
+# Bir model kataloğu anlık görüntüsü indirin
+curl -fsSL -o models-api.json https://models.dev/api.json
+
+# Derle
+MODELS_DEV_API_JSON=./models-api.json bun run build --single
 ```
 
-#### Kurulum Dizini (Installation Directory)
+Yürütülebilir dosya `dist/opencode-linux-x64/bin/rolandcode` konumunda (veya platformunuz için eşdeğer) bulunur.
 
-Kurulum betiği (install script), kurulum yolu (installation path) için aşağıdaki öncelik sırasını takip eder:
+## Doğrulama
 
-1. `$OPENCODE_INSTALL_DIR` - Özel kurulum dizini
-2. `$XDG_BIN_DIR` - XDG Base Directory Specification uyumlu yol
-3. `$HOME/bin` - Standart kullanıcı binary dizini (varsa veya oluşturulabiliyorsa)
-4. `$HOME/.opencode/bin` - Varsayılan yedek konum
+Her derleme temiz olarak doğrulanabilir:
 
 ```bash
-# Örnekler
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+bash scripts/verify-clean.sh
 ```
 
-### Ajanlar
+Bu komut, tüm kaynak ağacında bilinen telemetri alan adları ve SDK paketleri için grep yapar. Herhangi bir referans kalırsa derleme başarısız olur. Grep yalan söylemez.
 
-OpenCode, `Tab` tuşuyla aralarında geçiş yapabileceğiniz iki yerleşik (built-in) ajan içerir.
+## Nasıl Çalışır
 
-- **build** - Varsayılan, geliştirme çalışmaları için tam erişimli ajan
-- **plan** - Analiz ve kod keşfi için salt okunur ajan
-  - Varsayılan olarak dosya düzenlemelerini reddeder
-  - Bash komutlarını çalıştırmadan önce izin ister
-  - Tanımadığınız kod tabanlarını keşfetmek veya değişiklikleri planlamak için ideal
+Rolandcode, yukarı akış (upstream) OpenCode üzerinde küçük bir yama (patch) seti tutar. Her "strip" commit'i bir telemetri endişesini kaldırır:
 
-Ayrıca, karmaşık aramalar ve çok adımlı görevler için bir **genel** alt ajan bulunmaktadır.
-Bu dahili olarak kullanılır ve mesajlarda `@general` ile çağrılabilir.
+- `strip-posthog` — PostHog analitikleri
+- `strip-honeycomb` — Honeycomb telemetrisi
+- `strip-exa` — mcp.exa.ai arama yönlendirme
+- `strip-opencode-api` — api.opencode.ai ve opncd.ai uç noktaları
+- `strip-zen-gateway` — Zen proxy yönlendirme
+- `strip-app-proxy` — app.opencode.ai kapsamlı proxy
+- `strip-share-sync` — Otomatik oturum paylaşımı
+- `strip-models-dev` — Çalışma zamanında model listesi çekimi
 
-[Ajanlar](https://opencode.ai/docs/agents) hakkında daha fazla bilgi edinin.
+Küçük, izole commit'ler, yukarı akış hareket ettiğinde temiz bir şekilde rebase olur.
 
-### Dokümantasyon
+## Test Etme
 
-OpenCode'u nasıl yapılandıracağınız hakkında daha fazla bilgi için [**dokümantasyonumuza göz atın**](https://opencode.ai/docs).
+```bash
+# Tam dizi (kök kullanıcı olarak çalışıldığında Docker'da izin testlerini çalıştırır)
+bash scripts/test.sh
 
-### Katkıda Bulunma
+# Sadece ana dizi
+cd packages/opencode && bun test --timeout 30000
 
-OpenCode'a katkıda bulunmak istiyorsanız, lütfen bir pull request göndermeden önce [katkıda bulunma dokümanlarımızı](./CONTRIBUTING.md) okuyun.
+# Sadece izin testleri (kök olmamalı veya Docker kullanılmalı)
+docker run --rm -v $(pwd):/app:ro -w /app/packages/opencode -u 1000:1000 --tmpfs /tmp:exec oven/bun:1.3.10 \
+  bun test test/tool/write.test.ts test/config/tui.test.ts --timeout 30000
+```
 
-### OpenCode Üzerine Geliştirme
+### Bilinen Test Sorunları
 
-OpenCode ile ilgili bir proje üzerinde çalışıyorsanız ve projenizin adının bir parçası olarak "opencode" kullanıyorsanız (örneğin, "opencode-dashboard" veya "opencode-mobile"), lütfen README dosyanıza projenin OpenCode ekibi tarafından geliştirilmediğini ve bizimle hiçbir şekilde bağlantılı olmadığını belirten bir not ekleyin.
+| Test | Durum | Neden |
+|------|--------|-----|
+| `session.llm.stream` (10'dan 2'si) | Kararsız (Flaky) | Mock HTTP sunucusu durumu paralel testler arasında sızdırıyor. İzole çalıştırıldığında 10/10 geçer (`bun test test/session/llm.test.ts`). Yukarı akış test izolasyon hatası — kod hatası değil. |
+| `tool.write > işletim sistemi yazma erişimini reddettiğinde hata fırlatır` | Kök kullanıcı olarak başarısız | Kök kullanıcı `chmod 0o444`'ü atlatır. Docker'da kök olmayan kullanıcı olarak geçer. `scripts/test.sh` bunu otomatik olarak yönetir. |
+| `tui config > eski kaynak kaldırılamadığında yükleme devam eder` | Kök kullanıcı olarak başarısız | Aynı kök-vs-chmod sorunu. Docker'da kök olmayan kullanıcı olarak geçer. |
+| `fsmonitor` (2 test) | Atlandı | Sadece Windows (`process.platform === "win32"`). |
+| `worktree-remove` (1 test) | Atlandı | Sadece Windows. |
+| `unicode dosya adları değişiklik ve geri yükleme` | Atlandı | Yukarı akış açıkça atlandı — düzeltmedikleri bilinen hata. |
 
-### SSS
+## Kaynak Proje (Upstream)
 
-#### Bu Claude Code'dan nasıl farklı?
+Bu, [anomalyco/opencode](https://github.com/anomalyco/opencode) projesinin bir çatalıdır (MIT lisansı). Tüm orijinal kod onların. Tam yukarı akış commit geçmişi korunur — ne değişti ve neden değişti tam olarak görebilirsiniz.
 
-Yetenekler açısından Claude Code'a çok benzer. İşte temel farklar:
+OpenCode, harika bir TUI, LSP desteği ve çoklu sağlayıcı esnekliği ile yetenekli bir AI kodlama ajanıdır. İyi bir yazılım olduğu için kullanıyoruz. Telemetriyi kaldırmamızın nedeni ise gizlilik iddialarının davranışla eşleşmemesidir.
 
-- %100 açık kaynak
-- Herhangi bir sağlayıcıya bağlı değil. [OpenCode Zen](https://opencode.ai/zen) üzerinden sunduğumuz modelleri önermekle birlikte; OpenCode, Claude, OpenAI, Google veya hatta yerel modellerle kullanılabilir. Modeller geliştikçe aralarındaki farklar kapanacak ve fiyatlar düşecek, bu nedenle sağlayıcıdan bağımsız olmak önemlidir.
-- Kurulum gerektirmeyen hazır LSP desteği
-- TUI odaklı yaklaşım. OpenCode, neovim kullanıcıları ve [terminal.shop](https://terminal.shop)'un geliştiricileri tarafından geliştirilmektedir; terminalde olabileceklerin sınırlarını zorlayacağız.
-- İstemci/sunucu (client/server) mimarisi. Bu, örneğin OpenCode'un bilgisayarınızda çalışması ve siz onu bir mobil uygulamadan uzaktan yönetmenizi sağlar. TUI arayüzü olası istemcilerden sadece biridir.
+## Lisans
 
----
-
-**Topluluğumuza katılın** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+MIT — kaynak projeyle aynı. [LICENSE](LICENSE) dosyasına bakın.
