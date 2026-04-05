@@ -82,7 +82,7 @@ export namespace ModelsDev {
     const result = await Filesystem.readJson(Flag.OPENCODE_MODELS_PATH ?? filepath).catch(() => {})
     if (result) return result
     // @ts-ignore
-    const snapshot = await import("./models-snapshot")
+    const snapshot = await import("./models-snapshot.js")
       .then((m) => m.snapshot as Record<string, unknown>)
       .catch(() => undefined)
     if (snapshot) return snapshot
@@ -95,6 +95,7 @@ export namespace ModelsDev {
   }
 
   export async function refresh() {
-    // Remote fetch disabled — models come from build-time snapshot only
+    // Stripped: no remote model catalog fetch
+    ModelsDev.Data.reset()
   }
 }

@@ -3,6 +3,7 @@
   stdenvNoCC,
   callPackage,
   bun,
+  nodejs,
   sysctl,
   makeBinaryWrapper,
   models-dev,
@@ -19,6 +20,7 @@ stdenvNoCC.mkDerivation (finalAttrs: {
 
   nativeBuildInputs = [
     bun
+    nodejs # for patchShebangs node_modules
     installShellFiles
     makeBinaryWrapper
     models-dev
@@ -29,6 +31,8 @@ stdenvNoCC.mkDerivation (finalAttrs: {
     runHook preConfigure
 
     cp -R ${finalAttrs.node_modules}/. .
+    patchShebangs node_modules
+    patchShebangs packages/*/node_modules
 
     runHook postConfigure
   '';
@@ -51,10 +55,10 @@ stdenvNoCC.mkDerivation (finalAttrs: {
   installPhase = ''
     runHook preInstall
 
-    install -Dm755 dist/opencode-*/bin/opencode $out/bin/opencode
-    install -Dm644 schema.json $out/share/opencode/schema.json
+    install -Dm755 dist/opencode-*/bin/rolandcode $out/bin/rolandcode
+    install -Dm644 schema.json $out/share/rolandcode/schema.json
 
-    wrapProgram $out/bin/opencode \
+    wrapProgram $out/bin/rolandcode \
       --prefix PATH : ${
         lib.makeBinPath (
           [

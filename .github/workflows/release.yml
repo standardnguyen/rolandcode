@@ -2,27 +2,26 @@ name: Release
 on:
   push:
     tags:
-      - 'v*-clean*'
+      - 'v*-rc*'
+
+permissions:
+  contents: write
+  packages: write
 
 jobs:
   verify-and-release:
     name: Verify + Build + Release
-    runs-on: docker
-    container:
-      image: node:20-bookworm
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install bun
-        run: |
-          curl -fsSL https://bun.sh/install | bash
-          echo "$HOME/.bun/bin" >> $GITHUB_PATH
+      - uses: oven-sh/setup-bun@v2
 
       - name: Install system tools
-        run: apt-get update && apt-get install -y --no-install-recommends strace binutils file
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace
 
       - name: Install dependencies
-        run: $HOME/.bun/bin/bun install
+        run: bun install
 
       - name: Run primary telemetry verification
         run: bash scripts/verify-clean.sh
@@ -36,7 +35,7 @@ jobs:
       - name: Build rolandcode
         env:
           MODELS_DEV_API_JSON: test/tool/fixtures/models-api.json
-        run: cd packages/opencode && $HOME/.bun/bin/bun run build --single
+        run: cd packages/opencode && bun run build --single
 
       - name: Run binary forensics
         run: bash tests/binary/check-binary.sh --no-color
@@ -47,11 +46,9 @@ jobs:
           BINARY_DIR="packages/opencode/dist/opencode-linux-x64/bin"
           ARCHIVE="rolandcode-linux-x64-${TAG}.tar.gz"
 
-          # Verify binary exists
           ls -la "$BINARY_DIR/rolandcode"
           file "$BINARY_DIR/rolandcode"
 
-          # Create tarball
           tar -czf "$ARCHIVE" -C "$BINARY_DIR" rolandcode
           sha256sum "$ARCHIVE" > "${ARCHIVE}.sha256"
 
@@ -62,76 +59,33 @@ jobs:
           ls -lh "$ARCHIVE"
           cat "${ARCHIVE}.sha256"
 
-      - name: Create Forgejo release
-        env:
-          FORGEJO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG=${GITHUB_REF_NAME}
-          API_URL="${GITHUB_SERVER_URL}/api/v1"
-          REPO="${GITHUB_REPOSITORY}"
-          SHA256=$(cat "$SHA256_FILE")
-
-          # Build release payload via python to avoid shell quoting issues
-          python3 -c "
-          import json
-          body = '''## rolandcode ${TAG}
-
-          Telemetry-stripped build of OpenCode.
-
-          **Verification:** All checks passed (verify-clean.sh, static analysis, mutation tests, binary forensics).
-
-          **Platform:** Linux x64 (glibc)
-
-          **SHA256:**
-          \`\`\`
-          ${SHA256}
-          \`\`\`'''
-          payload = {
-              'tag_name': '${TAG}',
-              'name': '${TAG}',
-              'body': body,
-              'draft': False,
-              'prerelease': False
-          }
-          print(json.dumps(payload))
-          " > /tmp/release-payload.json
-
-          # Create release
-          curl -s -X POST "${API_URL}/repos/${REPO}/releases" \
-            -H "Authorization: token ${FORGEJO_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d @/tmp/release-payload.json > /tmp/release-response.json
-
-          RELEASE_ID=$(python3 -c "import json; print(json.load(open('/tmp/release-response.json'))['id'])")
-          echo "Created release ID: $RELEASE_ID"
-
-          # Upload binary archive
-          curl -s -X POST "${API_URL}/repos/${REPO}/releases/${RELEASE_ID}/assets?name=${ARCHIVE}" \
-            -H "Authorization: token ${FORGEJO_TOKEN}" \
-            -H "Content-Type: application/gzip" \
-            --data-binary "@${ARCHIVE}" > /tmp/upload1.json
-          python3 -c "import json; d=json.load(open('/tmp/upload1.json')); print(f'Uploaded: {d[\"name\"]} ({d[\"size\"]} bytes)')"
-
-          # Upload checksum file
-          curl -s -X POST "${API_URL}/repos/${REPO}/releases/${RELEASE_ID}/assets?name=${SHA256_FILE}" \
-            -H "Authorization: token ${FORGEJO_TOKEN}" \
-            -H "Content-Type: text/plain" \
-            --data-binary "@${SHA256_FILE}" > /tmp/upload2.json
-          python3 -c "import json; d=json.load(open('/tmp/upload2.json')); print(f'Uploaded: {d[\"name\"]} ({d[\"size\"]} bytes)')"
-
-          echo ""
-          echo "Forgejo release published: ${GITHUB_SERVER_URL}/${REPO}/releases/tag/${TAG}"
-
       - name: Create GitHub release
         env:
-          GH_TOKEN: ${{ secrets.GH_RELEASE_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG=${GITHUB_REF_NAME}
-          GH_REPO="standardnguyen/rolandcode"
-          GH_API="https://api.github.com"
           SHA256=$(cat "$SHA256_FILE")
+          REPO="${{ github.repository }}"
 
-          # Build release payload
+          # Check if release already exists for this tag
+          EXISTING=$(curl -s -o /tmp/existing-release.json -w "%{http_code}" \
+            -H "Authorization: token ${GH_TOKEN}" \
+            "https://api.github.com/repos/${REPO}/releases/tags/${TAG}")
+
+          if [ "$EXISTING" = "200" ]; then
+            ASSET_COUNT=$(python3 -c "import json; print(len(json.load(open('/tmp/existing-release.json')).get('assets', [])))")
+            if [ "$ASSET_COUNT" -ge 2 ]; then
+              echo "Release ${TAG} already exists with ${ASSET_COUNT} assets — skipping"
+              echo "Release URL: https://github.com/${REPO}/releases/tag/${TAG}"
+              exit 0
+            fi
+            echo "Release ${TAG} exists but is incomplete (${ASSET_COUNT} assets) — deleting and recreating"
+            RELEASE_ID=$(python3 -c "import json; print(json.load(open('/tmp/existing-release.json'))['id'])")
+            curl -s -X DELETE \
+              -H "Authorization: token ${GH_TOKEN}" \
+              "https://api.github.com/repos/${REPO}/releases/${RELEASE_ID}"
+          fi
+
           python3 -c "
           import json
           body = '''## rolandcode ${TAG}
@@ -154,34 +108,54 @@ jobs:
               'prerelease': False
           }
           print(json.dumps(payload))
-          " > /tmp/gh-release-payload.json
+          " > /tmp/release-payload.json
 
-          # Create release
-          curl -s -X POST "${GH_API}/repos/${GH_REPO}/releases" \
+          curl -s -X POST "https://api.github.com/repos/${REPO}/releases" \
             -H "Authorization: token ${GH_TOKEN}" \
             -H "Content-Type: application/json" \
-            -d @/tmp/gh-release-payload.json > /tmp/gh-release-response.json
+            -d @/tmp/release-payload.json > /tmp/release-response.json
+
+          # Verify the release was created successfully
+          python3 -c "
+          import json, sys
+          d = json.load(open('/tmp/release-response.json'))
+          if 'upload_url' not in d:
+              print(f'Release creation failed: {json.dumps(d, indent=2)}', file=sys.stderr)
+              sys.exit(1)
+          "
 
           UPLOAD_URL=$(python3 -c "
           import json
-          d = json.load(open('/tmp/gh-release-response.json'))
+          d = json.load(open('/tmp/release-response.json'))
           print(d['upload_url'].replace('{?name,label}', ''))
           ")
           echo "GitHub release created"
 
-          # Upload binary archive
           curl -s -X POST "${UPLOAD_URL}?name=${ARCHIVE}" \
             -H "Authorization: token ${GH_TOKEN}" \
             -H "Content-Type: application/gzip" \
-            --data-binary "@${ARCHIVE}" > /tmp/gh-upload1.json
-          python3 -c "import json; d=json.load(open('/tmp/gh-upload1.json')); print(f'GitHub uploaded: {d[\"name\"]} ({d[\"size\"]} bytes)')"
+            --data-binary "@${ARCHIVE}" > /tmp/upload1.json
+          python3 -c "import json; d=json.load(open('/tmp/upload1.json')); print(f'Uploaded: {d[\"name\"]} ({d[\"size\"]} bytes)')"
 
-          # Upload checksum file
           curl -s -X POST "${UPLOAD_URL}?name=${SHA256_FILE}" \
             -H "Authorization: token ${GH_TOKEN}" \
             -H "Content-Type: text/plain" \
-            --data-binary "@${SHA256_FILE}" > /tmp/gh-upload2.json
-          python3 -c "import json; d=json.load(open('/tmp/gh-upload2.json')); print(f'GitHub uploaded: {d[\"name\"]} ({d[\"size\"]} bytes)')"
+            --data-binary "@${SHA256_FILE}" > /tmp/upload2.json
+          python3 -c "import json; d=json.load(open('/tmp/upload2.json')); print(f'Uploaded: {d[\"name\"]} ({d[\"size\"]} bytes)')"
 
           echo ""
-          echo "GitHub release published: https://github.com/${GH_REPO}/releases/tag/${TAG}"
+          echo "Release published: https://github.com/${REPO}/releases/tag/${TAG}"
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push Docker image
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          IMAGE=ghcr.io/${{ github.repository }}
+
+          docker build -t "${IMAGE}:${TAG}" -t "${IMAGE}:latest" .
+          docker push "${IMAGE}:${TAG}"
+          docker push "${IMAGE}:latest"
+
+          echo "Docker image published: ${IMAGE}:${TAG}"

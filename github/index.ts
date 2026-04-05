@@ -377,7 +377,9 @@ async function getAccessToken() {
 
   let response
   if (isMock()) {
-    response = await fetch(`${oidcBaseUrl}/exchange_github_app_token_with_pat`, {
+    const baseUrl = process.env["OIDC_BASE_URL"]?.replace(/\/+$/, "")
+    if (!baseUrl) throw new Error("OIDC_BASE_URL environment variable is required")
+    response = await fetch(`${baseUrl}/exchange_github_app_token_with_pat`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${useEnvMock().mockToken}`,
@@ -386,6 +388,8 @@ async function getAccessToken() {
     })
   } else {
     const oidcToken = await core.getIDToken("opencode-github-action")
+    const oidcBaseUrl = process.env["OIDC_BASE_URL"]?.replace(/\/+$/, "")
+    if (!oidcBaseUrl) throw new Error("OIDC_BASE_URL environment variable is required")
     response = await fetch(`${oidcBaseUrl}/exchange_github_app_token`, {
       method: "POST",
       headers: {
@@ -499,7 +503,6 @@ async function subscribeSessionEvents() {
 
   const TOOL: Record<string, [string, string]> = {
     todowrite: ["Todo", "\x1b[33m\x1b[1m"],
-    todoread: ["Todo", "\x1b[33m\x1b[1m"],
     bash: ["Bash", "\x1b[31m\x1b[1m"],
     edit: ["Edit", "\x1b[32m\x1b[1m"],
     glob: ["Glob", "\x1b[34m\x1b[1m"],
