@@ -196,10 +196,6 @@ export const TuiThreadCommand = cmd({
             events: createEventSource(client),
           }
 
-      setTimeout(() => {
-        client.call("checkUpgrade", { directory: cwd }).catch(() => {})
-      }, 1000).unref?.()
-
       try {
         await tui({
           url: transport.url,
