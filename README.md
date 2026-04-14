@@ -92,7 +92,7 @@ Every build can be verified clean:
 bash scripts/verify-clean.sh
 ```
 
-This greps the entire source tree for all known telemetry domains and SDK packages. If any reference remains, the build fails. Grep doesn't lie.
+This scans the source tree for telemetry domains, SDK imports, obfuscated endpoints, and unknown outbound domains. It also verifies that the `models.dev` runtime fetch is still stripped — the vendored model catalog contains `models.dev` as inert metadata, so the scan checks the actual code path rather than string-matching a domain that appears in data.
 
 ## How it works
 

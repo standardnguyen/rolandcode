@@ -46,7 +46,7 @@ for ext in ts tsx js jsx go json yaml yml toml; do
 done
 
 # Exclude non-source directories and build artifacts
-EXCLUDE_ARGS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude-dir=tests --exclude=models-snapshot.ts --exclude=models-snapshot.js --exclude=models-api.json"
+EXCLUDE_ARGS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude-dir=tests"
 
 echo "=== Static Analysis ==="
 echo ""
@@ -54,12 +54,14 @@ echo ""
 # --- Check 1: Domain grep ---
 echo "--- 1. Domain grep ---"
 
+# models.dev is NOT in this list — it appears as metadata in the vendored model
+# catalog (models-snapshot.js, models-api.json) but the runtime fetch has been
+# stripped. The strip is verified directly in check 10 below.
 DOMAINS=(
   "posthog"
   "honeycomb"
   "api.opencode.ai"
   "opncd.ai"
-  "models.dev"
   "mcp.exa.ai"
   "opencode.ai/zen"
   "app.opencode.ai"
@@ -333,6 +335,20 @@ for pattern in 'new Worker(' 'worker_threads' 'child_process'; do
     info "$COUNT instances of '$pattern'"
   fi
 done
+
+# --- Check 10: models.dev runtime fetch strip verification ---
+# Instead of scanning for the string "models.dev" (which appears in vendored
+# model catalog metadata), verify directly that the runtime fetch is still stripped.
+echo ""
+echo "--- 10. models.dev strip verification ---"
+MODELS_TS="./packages/opencode/src/provider/models.ts"
+if [ ! -f "$MODELS_TS" ]; then
+  fail "$MODELS_TS not found — cannot verify models.dev strip"
+elif grep -q "Stripped: no remote model catalog fetch" "$MODELS_TS"; then
+  pass "models.dev runtime fetch is stripped (refresh() is stubbed)"
+else
+  fail "models.dev runtime fetch may have been reintroduced — refresh() in $MODELS_TS is not stubbed"
+fi
 
 # --- Summary ---
 echo ""

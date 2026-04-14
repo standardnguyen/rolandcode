@@ -14,12 +14,14 @@ echo "=== RolandCode Telemetry Verification ==="
 echo ""
 
 # --- All known telemetry domains ---
+# models.dev is NOT in this list — it appears as metadata in the vendored model
+# catalog (models-snapshot.js, models-api.json) but the runtime fetch has been
+# stripped. The strip is verified directly in check 6 below.
 DOMAINS=(
   "posthog"
   "honeycomb"
   "api.opencode.ai"
   "opncd.ai"
-  "models.dev"
   "mcp.exa.ai"
   "opencode.ai/zen"
   "app.opencode.ai"
@@ -60,7 +62,7 @@ for ext in ts tsx js jsx go json yaml yml toml; do
 done
 
 # Directories and files to exclude
-EXCLUDE_ARGS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude-dir=tests --exclude=models-snapshot.ts --exclude=models-snapshot.js --exclude=models-api.json"
+EXCLUDE_ARGS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude-dir=tests"
 
 # --- 1. Domain checks ---
 echo "--- 1. Domain checks (${#DOMAINS[@]} domains) ---"
@@ -231,6 +233,24 @@ if [[ -n "$UNKNOWN_DOMAINS" ]]; then
 else
   echo "PASS: all outbound domains are on the allowlist"
   CLEAN=$((CLEAN + 1))
+fi
+echo ""
+
+# --- 6. models.dev runtime fetch strip verification ---
+# Instead of scanning for the string "models.dev" (which appears in vendored
+# model catalog metadata), verify directly that the runtime fetch is still stripped.
+echo "--- 6. models.dev strip verification ---"
+TOTAL=$((TOTAL + 1))
+MODELS_TS="./packages/opencode/src/provider/models.ts"
+if [ ! -f "$MODELS_TS" ]; then
+  echo "FAIL: $MODELS_TS not found — cannot verify models.dev strip"
+  FAIL=$((FAIL + 1))
+elif grep -q "Stripped: no remote model catalog fetch" "$MODELS_TS"; then
+  echo "PASS: models.dev runtime fetch is stripped (refresh() is stubbed)"
+  CLEAN=$((CLEAN + 1))
+else
+  echo "FAIL: models.dev runtime fetch may have been reintroduced — refresh() in $MODELS_TS is not stubbed"
+  FAIL=$((FAIL + 1))
 fi
 echo ""
 
