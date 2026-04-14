@@ -14,9 +14,9 @@ echo "=== RolandCode Telemetry Verification ==="
 echo ""
 
 # --- All known telemetry domains ---
-# models.dev is NOT in this list — it appears as metadata in the vendored model
-# catalog (models-snapshot.js, models-api.json) but the runtime fetch has been
-# stripped. The strip is verified directly in check 6 below.
+# models.dev is NOT in this list — it appears as inert metadata in the vendored
+# model catalog (models-snapshot.js, models-api.json), which are excluded from
+# the scan. The runtime fetch is verified stripped in check 6 below.
 DOMAINS=(
   "posthog"
   "honeycomb"
@@ -62,7 +62,11 @@ for ext in ts tsx js jsx go json yaml yml toml; do
 done
 
 # Directories and files to exclude
-EXCLUDE_ARGS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude-dir=tests"
+# models-api.json is the upstream model catalog fixture — it contains provider
+# entries for opencode.ai/zen and other upstream infrastructure that the build
+# strips. models-snapshot.js is generated from it at build time (also stripped).
+# These are vendored data, not source code.
+EXCLUDE_ARGS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude-dir=tests --exclude=models-snapshot.js --exclude=models-api.json"
 
 # --- 1. Domain checks ---
 echo "--- 1. Domain checks (${#DOMAINS[@]} domains) ---"

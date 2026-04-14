@@ -46,7 +46,11 @@ for ext in ts tsx js jsx go json yaml yml toml; do
 done
 
 # Exclude non-source directories and build artifacts
-EXCLUDE_ARGS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude-dir=tests"
+# models-api.json is the upstream model catalog fixture — it contains provider
+# entries for opencode.ai/zen and other upstream infrastructure that the build
+# strips. models-snapshot.js is generated from it at build time (also stripped).
+# These are vendored data, not source code.
+EXCLUDE_ARGS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude-dir=tests --exclude=models-snapshot.js --exclude=models-api.json"
 
 echo "=== Static Analysis ==="
 echo ""
@@ -54,9 +58,9 @@ echo ""
 # --- Check 1: Domain grep ---
 echo "--- 1. Domain grep ---"
 
-# models.dev is NOT in this list — it appears as metadata in the vendored model
-# catalog (models-snapshot.js, models-api.json) but the runtime fetch has been
-# stripped. The strip is verified directly in check 10 below.
+# models.dev is NOT in this list — it appears as inert metadata in the vendored
+# model catalog (models-snapshot.js, models-api.json), which are excluded from
+# the scan. The runtime fetch is verified stripped in check 10 below.
 DOMAINS=(
   "posthog"
   "honeycomb"
