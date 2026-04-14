@@ -46,7 +46,7 @@ for ext in ts tsx js jsx go json yaml yml toml; do
 done
 
 # Exclude non-source directories and build artifacts
-EXCLUDE_ARGS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude-dir=tests --exclude=models-snapshot.ts --exclude=models-api.json"
+EXCLUDE_ARGS="--exclude-dir=node_modules --exclude-dir=.git --exclude-dir=vendor --exclude-dir=dist --exclude-dir=build --exclude-dir=tests --exclude=models-snapshot.ts --exclude=models-snapshot.js --exclude=models-api.json"
 
 echo "=== Static Analysis ==="
 echo ""
