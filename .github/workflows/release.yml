@@ -1,0 +1,161 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*-rc*'
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  verify-and-release:
+    name: Verify + Build + Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install system tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends strace
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run primary telemetry verification
+        run: bash scripts/verify-clean.sh
+
+      - name: Run static analysis suite
+        run: bash tests/static/check-source.sh --no-color
+
+      - name: Run mutation tests
+        run: bash tests/mutation/check-mutations.sh --no-color
+
+      - name: Build rolandcode
+        env:
+          MODELS_DEV_API_JSON: test/tool/fixtures/models-api.json
+        run: cd packages/opencode && bun run build --single
+
+      - name: Run binary forensics
+        run: bash tests/binary/check-binary.sh --no-color
+
+      - name: Package binary
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          BINARY_DIR="packages/opencode/dist/opencode-linux-x64/bin"
+          ARCHIVE="rolandcode-linux-x64-${TAG}.tar.gz"
+
+          ls -la "$BINARY_DIR/rolandcode"
+          file "$BINARY_DIR/rolandcode"
+
+          tar -czf "$ARCHIVE" -C "$BINARY_DIR" rolandcode
+          sha256sum "$ARCHIVE" > "${ARCHIVE}.sha256"
+
+          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
+          echo "SHA256_FILE=${ARCHIVE}.sha256" >> $GITHUB_ENV
+
+          echo "--- Package info ---"
+          ls -lh "$ARCHIVE"
+          cat "${ARCHIVE}.sha256"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          SHA256=$(cat "$SHA256_FILE")
+          REPO="${{ github.repository }}"
+
+          # Check if release already exists for this tag
+          EXISTING=$(curl -s -o /tmp/existing-release.json -w "%{http_code}" \
+            -H "Authorization: token ${GH_TOKEN}" \
+            "https://api.github.com/repos/${REPO}/releases/tags/${TAG}")
+
+          if [ "$EXISTING" = "200" ]; then
+            ASSET_COUNT=$(python3 -c "import json; print(len(json.load(open('/tmp/existing-release.json')).get('assets', [])))")
+            if [ "$ASSET_COUNT" -ge 2 ]; then
+              echo "Release ${TAG} already exists with ${ASSET_COUNT} assets — skipping"
+              echo "Release URL: https://github.com/${REPO}/releases/tag/${TAG}"
+              exit 0
+            fi
+            echo "Release ${TAG} exists but is incomplete (${ASSET_COUNT} assets) — deleting and recreating"
+            RELEASE_ID=$(python3 -c "import json; print(json.load(open('/tmp/existing-release.json'))['id'])")
+            curl -s -X DELETE \
+              -H "Authorization: token ${GH_TOKEN}" \
+              "https://api.github.com/repos/${REPO}/releases/${RELEASE_ID}"
+          fi
+
+          python3 -c "
+          import json
+          body = '''## rolandcode ${TAG}
+
+          Telemetry-stripped build of [OpenCode](https://github.com/anomalyco/opencode).
+
+          **Verification:** All checks passed (verify-clean.sh, static analysis, mutation tests, binary forensics).
+
+          **Platform:** Linux x64 (glibc)
+
+          **SHA256:**
+          \`\`\`
+          ${SHA256}
+          \`\`\`'''
+          payload = {
+              'tag_name': '${TAG}',
+              'name': '${TAG}',
+              'body': body,
+              'draft': False,
+              'prerelease': False
+          }
+          print(json.dumps(payload))
+          " > /tmp/release-payload.json
+
+          curl -s -X POST "https://api.github.com/repos/${REPO}/releases" \
+            -H "Authorization: token ${GH_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d @/tmp/release-payload.json > /tmp/release-response.json
+
+          # Verify the release was created successfully
+          python3 -c "
+          import json, sys
+          d = json.load(open('/tmp/release-response.json'))
+          if 'upload_url' not in d:
+              print(f'Release creation failed: {json.dumps(d, indent=2)}', file=sys.stderr)
+              sys.exit(1)
+          "
+
+          UPLOAD_URL=$(python3 -c "
+          import json
+          d = json.load(open('/tmp/release-response.json'))
+          print(d['upload_url'].replace('{?name,label}', ''))
+          ")
+          echo "GitHub release created"
+
+          curl -s -X POST "${UPLOAD_URL}?name=${ARCHIVE}" \
+            -H "Authorization: token ${GH_TOKEN}" \
+            -H "Content-Type: application/gzip" \
+            --data-binary "@${ARCHIVE}" > /tmp/upload1.json
+          python3 -c "import json; d=json.load(open('/tmp/upload1.json')); print(f'Uploaded: {d[\"name\"]} ({d[\"size\"]} bytes)')"
+
+          curl -s -X POST "${UPLOAD_URL}?name=${SHA256_FILE}" \
+            -H "Authorization: token ${GH_TOKEN}" \
+            -H "Content-Type: text/plain" \
+            --data-binary "@${SHA256_FILE}" > /tmp/upload2.json
+          python3 -c "import json; d=json.load(open('/tmp/upload2.json')); print(f'Uploaded: {d[\"name\"]} ({d[\"size\"]} bytes)')"
+
+          echo ""
+          echo "Release published: https://github.com/${REPO}/releases/tag/${TAG}"
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build and push Docker image
+        run: |
+          TAG=${GITHUB_REF_NAME}
+          IMAGE=ghcr.io/${{ github.repository }}
+
+          docker build -t "${IMAGE}:${TAG}" -t "${IMAGE}:latest" .
+          docker push "${IMAGE}:${TAG}"
+          docker push "${IMAGE}:latest"
+
+          echo "Docker image published: ${IMAGE}:${TAG}"

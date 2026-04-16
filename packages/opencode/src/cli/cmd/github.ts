@@ -367,8 +367,10 @@ export const GithubInstallCommand = cmd({
             s.stop("Installed GitHub app")
 
             async function getInstallation() {
+              const baseUrl = process.env["OIDC_BASE_URL"]?.replace(/\/+$/, "")
+              if (!baseUrl) throw new Error("OIDC_BASE_URL environment variable is required")
               return await fetch(
-                `https://api.opencode.ai/get_github_app_installation?owner=${app.owner}&repo=${app.repo}`,
+                `${baseUrl}/get_github_app_installation?owner=${app.owner}&repo=${app.repo}`,
               )
                 .then((res) => res.json())
                 .then((data) => data.installation)
@@ -745,7 +747,7 @@ export const GithubRunCommand = cmd({
 
       function normalizeOidcBaseUrl(): string {
         const value = process.env["OIDC_BASE_URL"]
-        if (!value) return "https://api.opencode.ai"
+        if (!value) throw new Error("OIDC_BASE_URL environment variable is required")
         return value.replace(/\/+$/, "")
       }
 

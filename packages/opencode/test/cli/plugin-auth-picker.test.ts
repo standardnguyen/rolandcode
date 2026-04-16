@@ -16,7 +16,7 @@ function hookWithoutAuth(): Hooks {
 }
 
 describe("resolvePluginProviders", () => {
-  test("returns plugin providers not in models.dev", () => {
+  test("returns plugin providers not in model catalog", () => {
     const result = resolvePluginProviders({
       hooks: [hookWithAuth("portkey")],
       existingProviders: {},
@@ -26,7 +26,7 @@ describe("resolvePluginProviders", () => {
     expect(result).toEqual([{ id: "portkey", name: "portkey" }])
   })
 
-  test("skips providers already in models.dev", () => {
+  test("skips providers already in model catalog", () => {
     const result = resolvePluginProviders({
       hooks: [hookWithAuth("anthropic")],
       existingProviders: { anthropic: {} },

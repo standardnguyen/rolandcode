@@ -2,7 +2,6 @@ import { Global } from "../global"
 import { Log } from "../util/log"
 import path from "path"
 import z from "zod"
-import { Installation } from "../installation"
 import { Flag } from "../flag/flag"
 import { lazy } from "@/util/lazy"
 import { Filesystem } from "../util/filesystem"
@@ -14,11 +13,11 @@ import { Hash } from "@/util/hash"
 /* @ts-ignore */
 
 export namespace ModelsDev {
-  const log = Log.create({ service: "models.dev" })
+  const log = Log.create({ service: "models-snapshot" })
   const source = url()
   const filepath = path.join(
     Global.Path.cache,
-    source === "https://models.dev" ? "models.json" : `models-${Hash.fast(source)}.json`,
+    source === "" ? "models.json" : `models-${Hash.fast(source)}.json`,
   )
   const ttl = 5 * 60 * 1000
 
@@ -109,7 +108,8 @@ export namespace ModelsDev {
   export type Provider = z.infer<typeof Provider>
 
   function url() {
-    return Flag.OPENCODE_MODELS_URL || "https://models.dev"
+    // Stripped: no remote model catalog fetch. Models come from the bundled snapshot.
+    return ""
   }
 
   function fresh() {
@@ -121,11 +121,8 @@ export namespace ModelsDev {
   }
 
   const fetchApi = async () => {
-    const result = await fetch(`${url()}/api.json`, {
-      headers: { "User-Agent": Installation.USER_AGENT },
-      signal: AbortSignal.timeout(10000),
-    })
-    return { ok: result.ok, text: await result.text() }
+    // Stripped: no remote fetch. Return an empty catalog — callers fall back to the bundled snapshot.
+    return { ok: false, text: "{}" }
   }
 
   export const Data = lazy(async () => {
@@ -137,7 +134,7 @@ export namespace ModelsDev {
       .catch(() => undefined)
     if (snapshot) return snapshot
     if (Flag.OPENCODE_DISABLE_MODELS_FETCH) return {}
-    return Flock.withLock(`models-dev:${filepath}`, async () => {
+    return Flock.withLock(`models-snapshot:${filepath}`, async () => {
       const result = await Filesystem.readJson(Flag.OPENCODE_MODELS_PATH ?? filepath).catch(() => {})
       if (result) return result
       const result2 = await fetchApi()
@@ -155,28 +152,8 @@ export namespace ModelsDev {
     return result as Record<string, Provider>
   }
 
-  export async function refresh(force = false) {
-    if (skip(force)) return ModelsDev.Data.reset()
-    await Flock.withLock(`models-dev:${filepath}`, async () => {
-      if (skip(force)) return ModelsDev.Data.reset()
-      const result = await fetchApi()
-      if (!result.ok) return
-      await Filesystem.write(filepath, result.text)
-      ModelsDev.Data.reset()
-    }).catch((e) => {
-      log.error("Failed to fetch models.dev", {
-        error: e,
-      })
-    })
+  export async function refresh(_force = false) {
+    // Stripped: no remote refresh. Bundled snapshot is the source of truth.
+    return ModelsDev.Data.reset()
   }
-}
-
-if (!Flag.OPENCODE_DISABLE_MODELS_FETCH && !process.argv.includes("--get-yargs-completions")) {
-  ModelsDev.refresh()
-  setInterval(
-    async () => {
-      await ModelsDev.refresh()
-    },
-    60 * 1000 * 60,
-  ).unref()
 }

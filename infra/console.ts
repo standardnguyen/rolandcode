@@ -215,7 +215,7 @@ const SALESFORCE_INSTANCE_URL = new sst.Secret("SALESFORCE_INSTANCE_URL")
 
 const logProcessor = new sst.cloudflare.Worker("LogProcessor", {
   handler: "packages/console/function/src/log-processor.ts",
-  link: [new sst.Secret("HONEYCOMB_API_KEY")],
+  link: [],
 })
 
 new sst.cloudflare.x.SolidStart("Console", {

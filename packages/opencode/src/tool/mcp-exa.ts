@@ -1,29 +1,9 @@
 import { Duration, Effect, Schema } from "effect"
-import { HttpClient, HttpClientRequest } from "effect/unstable/http"
+import { HttpClient } from "effect/unstable/http"
 
-const URL = "https://mcp.exa.ai/mcp"
-
-const McpResult = Schema.Struct({
-  result: Schema.Struct({
-    content: Schema.Array(
-      Schema.Struct({
-        type: Schema.String,
-        text: Schema.String,
-      }),
-    ),
-  }),
-})
-
-const decode = Schema.decodeUnknownEffect(Schema.fromJsonString(McpResult))
-
-const parseSse = Effect.fn("McpExa.parseSse")(function* (body: string) {
-  for (const line of body.split("\n")) {
-    if (!line.startsWith("data: ")) continue
-    const data = yield* decode(line.substring(6))
-    if (data.result.content[0]?.text) return data.result.content[0].text
-  }
-  return undefined
-})
+// Stripped: upstream integrated an Exa Labs MCP endpoint as a first-class search tool.
+// We do not want the user's queries forwarded to a third party by default.
+// Call sites (websearch.ts, codesearch.ts) still compile, but receive no results.
 
 export const SearchArgs = Schema.Struct({
   query: Schema.String,
@@ -38,39 +18,10 @@ export const CodeArgs = Schema.Struct({
   tokensNum: Schema.Number,
 })
 
-const McpRequest = <F extends Schema.Struct.Fields>(args: Schema.Struct<F>) =>
-  Schema.Struct({
-    jsonrpc: Schema.Literal("2.0"),
-    id: Schema.Literal(1),
-    method: Schema.Literal("tools/call"),
-    params: Schema.Struct({
-      name: Schema.String,
-      arguments: args,
-    }),
-  })
-
 export const call = <F extends Schema.Struct.Fields>(
-  http: HttpClient.HttpClient,
-  tool: string,
-  args: Schema.Struct<F>,
-  value: Schema.Struct.Type<F>,
-  timeout: Duration.Input,
-) =>
-  Effect.gen(function* () {
-    const request = yield* HttpClientRequest.post(URL).pipe(
-      HttpClientRequest.accept("application/json, text/event-stream"),
-      HttpClientRequest.schemaBodyJson(McpRequest(args))({
-        jsonrpc: "2.0" as const,
-        id: 1 as const,
-        method: "tools/call" as const,
-        params: { name: tool, arguments: value },
-      }),
-    )
-    const response = yield* HttpClient.filterStatusOk(http)
-      .execute(request)
-      .pipe(
-        Effect.timeoutOrElse({ duration: timeout, orElse: () => Effect.die(new Error(`${tool} request timed out`)) }),
-      )
-    const body = yield* response.text
-    return yield* parseSse(body)
-  })
+  _http: HttpClient.HttpClient,
+  _tool: string,
+  _args: Schema.Struct<F>,
+  _value: Schema.Struct.Type<F>,
+  _timeout: Duration.Input,
+) => Effect.succeed<string | undefined>(undefined)

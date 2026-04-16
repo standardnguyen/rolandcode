@@ -10,7 +10,6 @@ import { Command } from "../command"
 import { Instance } from "./instance"
 import { Log } from "@/util/log"
 import { FileWatcher } from "@/file/watcher"
-import { ShareNext } from "@/share/share-next"
 import * as Effect from "effect/Effect"
 
 export const InstanceBootstrap = Effect.gen(function* () {
@@ -19,7 +18,6 @@ export const InstanceBootstrap = Effect.gen(function* () {
   yield* Effect.all(
     [
       LSP.Service,
-      ShareNext.Service,
       Format.Service,
       File.Service,
       FileWatcher.Service,
