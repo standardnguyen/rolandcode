@@ -22,7 +22,7 @@ import { Auth } from "@/auth"
 import { Installation } from "@/installation"
 import { makeRuntime } from "@/effect/run-service"
 import * as Option from "effect/Option"
-import * as OtelTracer from "@effect/opentelemetry/Tracer"
+// OpenTelemetry stripped; tracer is always undefined.
 
 export namespace LLM {
   const log = Log.create({ service: "llm" })
@@ -314,9 +314,7 @@ export namespace LLM {
             })
           }
 
-          const tracer = cfg.experimental?.openTelemetry
-            ? Option.getOrUndefined(yield* Effect.serviceOption(OtelTracer.OtelTracer))
-            : undefined
+          const tracer = undefined
 
           return streamText({
             onError(error) {

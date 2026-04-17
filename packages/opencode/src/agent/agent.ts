@@ -22,7 +22,7 @@ import { Skill } from "../skill"
 import { Effect, Context, Layer } from "effect"
 import { InstanceState } from "@/effect/instance-state"
 import * as Option from "effect/Option"
-import * as OtelTracer from "@effect/opentelemetry/Tracer"
+// OpenTelemetry stripped; tracer is always undefined.
 
 export namespace Agent {
   export const Info = z
@@ -336,9 +336,7 @@ export namespace Agent {
           const model = input.model ?? (yield* provider.defaultModel())
           const resolved = yield* provider.getModel(model.providerID, model.modelID)
           const language = yield* provider.getLanguage(resolved)
-          const tracer = cfg.experimental?.openTelemetry
-            ? Option.getOrUndefined(yield* Effect.serviceOption(OtelTracer.OtelTracer))
-            : undefined
+          const tracer = undefined
 
           const system = [PROMPT_GENERATE]
           yield* plugin.trigger("experimental.chat.system.transform", { model: resolved }, { system })
