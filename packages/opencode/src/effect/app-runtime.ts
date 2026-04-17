@@ -1,6 +1,6 @@
 import { Layer, ManagedRuntime } from "effect"
 import { attach, memoMap } from "./run-service"
-import { Observability } from "./observability"
+import { EffectLogger } from "./logger"
 
 import { AppFileSystem } from "@/filesystem"
 import { Bus } from "@/bus"
@@ -49,7 +49,7 @@ import { ShareNext } from "@/share/share-next"
 import { SessionShare } from "@/share/session"
 
 export const AppLayer = Layer.mergeAll(
-  Observability.layer,
+  EffectLogger.layer,
   AppFileSystem.defaultLayer,
   Bus.defaultLayer,
   Auth.defaultLayer,

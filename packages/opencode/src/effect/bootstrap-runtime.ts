@@ -10,7 +10,7 @@ import { File } from "@/file"
 import { Vcs } from "@/project/vcs"
 import { Snapshot } from "@/snapshot"
 import { Bus } from "@/bus"
-import { Observability } from "./observability"
+import { EffectLogger } from "./logger"
 
 export const BootstrapLayer = Layer.mergeAll(
   Plugin.defaultLayer,
@@ -22,6 +22,6 @@ export const BootstrapLayer = Layer.mergeAll(
   Vcs.defaultLayer,
   Snapshot.defaultLayer,
   Bus.defaultLayer,
-).pipe(Layer.provide(Observability.layer))
+).pipe(Layer.provide(EffectLogger.layer))
 
 export const BootstrapRuntime = ManagedRuntime.make(BootstrapLayer, { memoMap })
