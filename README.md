@@ -1,29 +1,28 @@
 # Rolandcode
 
-A clean fork of [OpenCode](https://github.com/anomalyco/opencode) with all telemetry and phone-home behavior removed.
+A fork of [OpenCode](https://github.com/anomalyco/opencode) that bakes the model catalog into the binary at build time, removes the web-UI fallback proxy, and strips references to the vendor's hosted sharing/search/proxy endpoints from the source tree.
 
-OpenCode markets itself as "privacy-first" and "open source," but silently transmits data to multiple third-party services — analytics (PostHog), telemetry (Honeycomb), session sharing (opncd.ai), prompt proxying (opencode.ai/zen), search query forwarding (mcp.exa.ai), and IP-leaking model list fetches (models.dev). The maintainers initially denied telemetry existed ([#459](https://github.com/sst/opencode/issues/459)), then acknowledged it. Users report that disabling telemetry in config doesn't fully stop outbound connections ([#5554](https://github.com/sst/opencode/issues/5554)).
+Most of what upstream calls out to is opt-in (session sharing, GitHub integration, the Zen hosted provider) or gated behind a permission prompt (Exa web search) — setting the right config does the job for those. Rolandcode removes the code paths anyway, belt-and-suspenders, and runs `scripts/verify-clean.sh` on every build so new references can't silently reappear on a sync.
 
-Rolandcode doesn't try to convince OpenCode to change. It just strips their telemetry and ships clean builds.
+The name is from Browning's *Childe Roland to the Dark Tower Came*.
 
-The name is from Browning's *Childe Roland to the Dark Tower Came* — Roland reaches the tower despite everything trying to stop him.
+> **Correction (2026-04-17):** An earlier version of this README claimed OpenCode "silently transmits data" via PostHog, Honeycomb, and a list of other endpoints. That was overstated. After [this r/LocalLLaMA comment from u/Spotty_Weldah](https://www.reddit.com/r/LocalLLaMA/comments/1s2q4et/opencode_source_code_audit_7_external_domains/) — the author of the original source-code audit, who walked back their own framing after going deeper — I went back through the source myself: PostHog lives in a GitHub Actions download-stats cron, Honeycomb lives in the cloud-console Lambda, and most of the remaining endpoints are opt-in or permission-gated in upstream. The genuinely default-on, in-CLI calls are the `models.dev` startup fetch and the `app.opencode.ai` web-UI fallback proxy — those are the real reason the fork exists. Sorry for the overclaim, and thanks to Spotty_Weldah for the correction.
 
 ---
 
-## What's removed
+## What's stripped, and what it actually does in upstream
 
-| Endpoint | What it sent |
-|----------|-------------|
-| `us.i.posthog.com` | Usage analytics |
-| `api.honeycomb.io` | Telemetry, IP address, location |
-| `api.opencode.ai` | Session content, prompts |
-| `opncd.ai` | Session sharing data |
-| `opencode.ai/zen/v1` | Prompts proxied through OpenCode's gateway |
-| `mcp.exa.ai` | Search queries |
-| `models.dev` | Model list fetches (leaks IP) |
-| `app.opencode.ai` | Catch-all app proxy |
+| Endpoint | Upstream behavior | Category |
+|----------|------------------|----------|
+| `models.dev` | Fetched on startup to populate the model catalog. Redirectable via `OPENCODE_MODELS_URL`. | **Default-on** — baked from snapshot at build time instead |
+| `app.opencode.ai` | Fallback proxy in the web-UI route (`src/server/ui/index.ts`) when embedded UI assets are absent | **Default-on for web-UI users** — proxy code removed |
+| `opncd.ai` / `api.opencode.ai` | Session sharing. Only fires after `/share`, `share: auto` in config, or `OPENCODE_AUTO_SHARE=1` | Opt-in upstream; code path removed |
+| `opencode.ai/zen/v1` | Hosted provider ("Zen"/"Go"). Only if the user signs up at opencode.ai/zen and configures the provider | Opt-in upstream; code path removed |
+| `mcp.exa.ai` | Web search. Invoked by the `websearch` tool after the user approves a permission prompt | Permission-gated upstream; code path removed |
+| `us.i.posthog.com` | Download-stats cron in `script/stats.ts` + `.github/workflows/stats.yml`. Not built into the CLI. | Not in upstream CLI; source kept clean as a guard |
+| `api.honeycomb.io` | Cloud-console Lambda log processor in `packages/console/`. Not built into the CLI. | Not in upstream CLI; source kept clean as a guard |
 
-The model catalog is vendored at build time from a local snapshot — no runtime phone-home.
+At this point, those first two rows are the real reasons the fork exists. That and inertia. The rest is defense-in-depth — config drift, a future regression, or a silent upstream change can't put them back.
 
 ## Installation
 
@@ -92,20 +91,20 @@ Every build can be verified clean:
 bash scripts/verify-clean.sh
 ```
 
-This greps the entire source tree for all known telemetry domains and SDK packages. If any reference remains, the build fails. Grep doesn't lie.
+This greps the entire source tree for the known domains and SDK packages. If any reference remains, the build fails. Mechanical, not clever — but it catches regressions on upstream syncs.
 
 ## How it works
 
-Rolandcode maintains a small patch set on top of upstream OpenCode. Each strip commit removes one telemetry concern:
+Rolandcode maintains a small patch set on top of upstream. Each strip commit targets one concern:
 
-- `strip-posthog` — PostHog analytics
-- `strip-honeycomb` — Honeycomb telemetry
-- `strip-exa` — mcp.exa.ai search forwarding
-- `strip-opencode-api` — api.opencode.ai and opncd.ai endpoints
-- `strip-zen-gateway` — Zen proxy routing
-- `strip-app-proxy` — app.opencode.ai catch-all proxy
-- `strip-share-sync` — Automatic session sharing
-- `strip-models-dev` — Runtime model list fetching
+- `strip-models-dev` — runtime model-list fetch; replaced with a build-time snapshot
+- `strip-app-proxy` — `app.opencode.ai` web-UI fallback proxy
+- `strip-share-sync` — automatic session sharing
+- `strip-opencode-api` — `api.opencode.ai` / `opncd.ai` endpoints
+- `strip-zen-gateway` — Zen hosted-provider routing
+- `strip-exa` — `mcp.exa.ai` web search
+- `strip-posthog` — removes `script/stats.ts` references so the domain can't drift into the CLI
+- `strip-honeycomb` — same for `packages/console` Honeycomb references
 
 Small, isolated commits rebase cleanly when upstream moves.
 
@@ -138,7 +137,7 @@ docker run --rm -v $(pwd):/app:ro -w /app/packages/opencode -u 1000:1000 --tmpfs
 
 This is a fork of [anomalyco/opencode](https://github.com/anomalyco/opencode) (MIT license). All original code is theirs. The full upstream commit history is preserved — you can see exactly what was changed and why.
 
-OpenCode is a capable AI coding agent with a great TUI, LSP support, and multi-provider flexibility. We use it because it's good software. We strip the telemetry because the privacy claims don't match the behavior.
+OpenCode is a capable AI coding agent with a great TUI, LSP support, and multi-provider flexibility. I use it because it's good software. The strips exist because I'd rather not keep `OPENCODE_MODELS_URL` and a careful config review in my head on every invocation.
 
 ## License
 
