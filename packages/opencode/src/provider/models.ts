@@ -1,16 +1,46 @@
 import { Global } from "../global"
+import { Log } from "../util/log"
 import path from "path"
 import z from "zod"
 import { Flag } from "../flag/flag"
 import { lazy } from "@/util/lazy"
 import { Filesystem } from "../util/filesystem"
+import { Flock } from "@/util/flock"
+import { Hash } from "@/util/hash"
 
 // Try to import bundled snapshot (generated at build time)
 // Falls back to undefined in dev mode when snapshot doesn't exist
 /* @ts-ignore */
 
 export namespace ModelsDev {
-  const filepath = path.join(Global.Path.cache, "models.json")
+  const log = Log.create({ service: "models-snapshot" })
+  const source = url()
+  const filepath = path.join(
+    Global.Path.cache,
+    source === "" ? "models.json" : `models-${Hash.fast(source)}.json`,
+  )
+  const ttl = 5 * 60 * 1000
+
+  type JsonValue = string | number | boolean | null | { [key: string]: JsonValue } | JsonValue[]
+
+  const JsonValue: z.ZodType<JsonValue> = z.lazy(() =>
+    z.union([z.string(), z.number(), z.boolean(), z.null(), z.array(JsonValue), z.record(z.string(), JsonValue)]),
+  )
+
+  const Cost = z.object({
+    input: z.number(),
+    output: z.number(),
+    cache_read: z.number().optional(),
+    cache_write: z.number().optional(),
+    context_over_200k: z
+      .object({
+        input: z.number(),
+        output: z.number(),
+        cache_read: z.number().optional(),
+        cache_write: z.number().optional(),
+      })
+      .optional(),
+  })
 
   export const Model = z.object({
     id: z.string(),
@@ -31,22 +61,7 @@ export namespace ModelsDev {
           .strict(),
       ])
       .optional(),
-    cost: z
-      .object({
-        input: z.number(),
-        output: z.number(),
-        cache_read: z.number().optional(),
-        cache_write: z.number().optional(),
-        context_over_200k: z
-          .object({
-            input: z.number(),
-            output: z.number(),
-            cache_read: z.number().optional(),
-            cache_write: z.number().optional(),
-          })
-          .optional(),
-      })
-      .optional(),
+    cost: Cost.optional(),
     limit: z.object({
       context: z.number(),
       input: z.number().optional(),
@@ -58,12 +73,26 @@ export namespace ModelsDev {
         output: z.array(z.enum(["text", "audio", "image", "video", "pdf"])),
       })
       .optional(),
-    experimental: z.boolean().optional(),
+    experimental: z
+      .object({
+        modes: z
+          .record(
+            z.string(),
+            z.object({
+              cost: Cost.optional(),
+              provider: z
+                .object({
+                  body: z.record(z.string(), JsonValue).optional(),
+                  headers: z.record(z.string(), z.string()).optional(),
+                })
+                .optional(),
+            }),
+          )
+          .optional(),
+      })
+      .optional(),
     status: z.enum(["alpha", "beta", "deprecated"]).optional(),
-    options: z.record(z.string(), z.any()),
-    headers: z.record(z.string(), z.string()).optional(),
     provider: z.object({ npm: z.string().optional(), api: z.string().optional() }).optional(),
-    variants: z.record(z.string(), z.record(z.string(), z.any())).optional(),
   })
   export type Model = z.infer<typeof Model>
 
@@ -78,6 +107,24 @@ export namespace ModelsDev {
 
   export type Provider = z.infer<typeof Provider>
 
+  function url() {
+    // Stripped: no remote model catalog fetch. Models come from the bundled snapshot.
+    return ""
+  }
+
+  function fresh() {
+    return Date.now() - Number(Filesystem.stat(filepath)?.mtimeMs ?? 0) < ttl
+  }
+
+  function skip(force: boolean) {
+    return !force && fresh()
+  }
+
+  const fetchApi = async () => {
+    // Stripped: no remote fetch. Return an empty catalog — callers fall back to the bundled snapshot.
+    return { ok: false, text: "{}" }
+  }
+
   export const Data = lazy(async () => {
     const result = await Filesystem.readJson(Flag.OPENCODE_MODELS_PATH ?? filepath).catch(() => {})
     if (result) return result
@@ -86,7 +133,18 @@ export namespace ModelsDev {
       .then((m) => m.snapshot as Record<string, unknown>)
       .catch(() => undefined)
     if (snapshot) return snapshot
-    return {}
+    if (Flag.OPENCODE_DISABLE_MODELS_FETCH) return {}
+    return Flock.withLock(`models-snapshot:${filepath}`, async () => {
+      const result = await Filesystem.readJson(Flag.OPENCODE_MODELS_PATH ?? filepath).catch(() => {})
+      if (result) return result
+      const result2 = await fetchApi()
+      if (result2.ok) {
+        await Filesystem.write(filepath, result2.text).catch((e) => {
+          log.error("Failed to write models cache", { error: e })
+        })
+      }
+      return JSON.parse(result2.text)
+    })
   })
 
   export async function get() {
@@ -94,8 +152,8 @@ export namespace ModelsDev {
     return result as Record<string, Provider>
   }
 
-  export async function refresh() {
-    // Stripped: no remote model catalog fetch
-    ModelsDev.Data.reset()
+  export async function refresh(_force = false) {
+    // Stripped: no remote refresh. Bundled snapshot is the source of truth.
+    return ModelsDev.Data.reset()
   }
 }

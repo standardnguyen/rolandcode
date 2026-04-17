@@ -10,6 +10,7 @@ import { Instance } from "../../project/instance"
 import { ShareNext } from "../../share/share-next"
 import { EOL } from "os"
 import { Filesystem } from "../../util/filesystem"
+import { AppRuntime } from "@/effect/app-runtime"
 
 /** Discriminated union returned by the ShareNext API (GET /api/shares/:id/data) */
 export type ShareData =
@@ -19,7 +20,7 @@ export type ShareData =
   | { type: "session_diff"; data: unknown }
   | { type: "model"; data: unknown }
 
-/** Extract share ID from a share URL */
+/** Extract share ID from a share URL like https://example.com/share/abc123 */
 export function parseShareUrl(url: string): string | null {
   const match = url.match(/^https?:\/\/[^/]+\/share\/([a-zA-Z0-9_-]+)$/)
   return match ? match[1] : null
@@ -100,7 +101,7 @@ export const ImportCommand = cmd({
       if (isUrl) {
         const slug = parseShareUrl(args.file)
         if (!slug) {
-          const baseUrl = await ShareNext.url()
+          const baseUrl = await AppRuntime.runPromise(ShareNext.Service.use((svc) => svc.url()))
           process.stdout.write(`Invalid URL format. Expected: ${baseUrl}/share/<slug>`)
           process.stdout.write(EOL)
           return
