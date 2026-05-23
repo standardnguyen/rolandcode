@@ -1,5 +1,15 @@
 # Rolandcode
 
+> **Status: maintenance mode (2026-05-22).** This fork is pinned to upstream `v1.4.6` and is not getting active syncs. The correction further down is most of the reason: of the endpoints originally cited, only two (`models.dev` startup fetch, `app.opencode.ai` web-UI fallback proxy) are actually default-on in upstream's CLI. That's a thin enough strip surface that maintaining a parallel TypeScript codebase across upstream's restructures isn't justified by the threat-model delta. As of v1.4.14 upstream consolidated `packages/server` + `packages/util` into `packages/shared`, which would break 84 of this fork's imports on its own; the v1.4 → v1.15 path past that compounds the cost further.
+>
+> **If you want strip-equivalent protection on a newer upstream:** run upstream `opencode` and either (a) set `OPENCODE_MODELS_URL` to a local snapshot, or (b) blackhole `models.dev` and `app.opencode.ai` at your DNS / firewall layer. That's the no-fork equivalent of what this codebase does mechanically, and it works against future endpoints the same way.
+>
+> The existing v1.4.6 binary still works and isn't being deprecated. Security-relevant fixes from upstream can be cherry-picked manually into a `v1.4.6` patch line if needed — open an issue.
+>
+> Personal context for anyone wondering: most of my AI-coding work runs through Claude Code now. Rolandcode exists for the local-tier sovereignty case (a local LLM on hardware I control, no calls leaving the network), and at that scope v1.4.6 is plenty — it's already a capable TUI against a local llama.cpp endpoint. I don't need it to keep up with upstream's frontier features, because the frontier work happens through API on a different surface. So this fork has stopped being a tracking effort and become a frozen artifact, which is the honest version of what it always was.
+
+---
+
 A fork of [OpenCode](https://github.com/anomalyco/opencode) that bakes the model catalog into the binary at build time, removes the web-UI fallback proxy, and strips references to the vendor's hosted sharing/search/proxy endpoints from the source tree.
 
 Most of what upstream calls out to is opt-in (session sharing, GitHub integration, the Zen hosted provider) or gated behind a permission prompt (Exa web search) — setting the right config does the job for those. Rolandcode removes the code paths anyway, belt-and-suspenders, and runs `scripts/verify-clean.sh` on every build so new references can't silently reappear on a sync.
